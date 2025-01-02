@@ -6,6 +6,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "GetBooruImageInfo": "Fetch Booru Tags + Image",
+    "GetBooruImageInfo": "Fetch e621/Booru Tags + Image",
     "TagEncode": "Tag Encode",
 }
