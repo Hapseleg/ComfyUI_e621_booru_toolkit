@@ -5,7 +5,7 @@ import requests
 import torch
 from PIL import Image
 
-# note: gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=11234062&json=1
+# note: gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
 
 
 def to_tensor(image: Image):
@@ -31,7 +31,7 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
 
 def process_e621(response, scale_target, img_size, format_tags):
     post = response.get("post", {})
-    # NOTE: e621 has contributor list in tags, unused
+    # NOTE: e621 has contributor key in tags, unused
     # Get tags, e6 tags are in a list instead of space separated string like dbr
     tags = post.get("tags", {})
     general_tags = ", ".join(tags.get("general", []))
@@ -209,9 +209,6 @@ class GetBooruPost:
                 json_url = json_url + sep + query
         else:
             json_url = url
-        print(json_url)  #
-        print(" aaa ")
-        print(requests.get(json_url))
 
         # todo: check if e6 api format or dbr, or other
         if "e621" in json_url or "e926" in json_url:
@@ -224,7 +221,7 @@ class GetBooruPost:
                 "User-Agent": user_agent
             }
 
-            response = requests.get(json_url, headers=headers)
+            response = requests.get(json_url, headers=headers).json()
             print(response.json())
 
             return process_e621(response, scale_target, img_size, format_tags)
