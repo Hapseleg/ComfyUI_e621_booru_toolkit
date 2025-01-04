@@ -204,7 +204,7 @@ class GetBooruPost:
             # Add .json to the base URL for JSON API
             json_url = base_url + ".json"
 
-            # Remake full URL with query part, if any
+            # Remake full URL with query part, if any, maybe not needed
             if query:
                 json_url = json_url + sep + query
         else:
@@ -212,14 +212,10 @@ class GetBooruPost:
 
         # todo: check if e6 api format or dbr, or other
         if "e621" in json_url or "e926" in json_url:
-            api_key = " "
             user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
 
             # Headers including Authorization and User-Agent
-            headers = {
-                # "Authorization": "Basic " + api_key,
-                "User-Agent": user_agent
-            }
+            headers = {"User-Agent": user_agent}
 
             response = requests.get(json_url, headers=headers).json()
 
