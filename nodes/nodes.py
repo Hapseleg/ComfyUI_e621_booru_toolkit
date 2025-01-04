@@ -57,8 +57,15 @@ def get_e621_data(response, img_size):
         img_tensor = blank_img_tensor
 
     else:
-        # Select image size variant based on img_size, default to "file" key's "url" value if not img_size
-        image_url = post.get(img_size, {}).get("url", post.get("file", {}).get("url"))
+        if img_size not in ["original", "sample"]:
+            img_size = "preview"
+        if img_size == "original":
+            img_size = "file"
+
+        image_url = post.get(img_size, {}).get("url")
+
+        if not image_url:  # fallback
+            image_url = post.get("preview", {}).get("url")
 
         img_data = requests.get(image_url).content
         img_stream = io.BytesIO(img_data)
@@ -146,7 +153,7 @@ class GetBooruPost:
                     ],
                     {
                         "default": "none - don't download image",
-                        "tooltip": "Select the image size variant to output through 'IMAGE'. Choose 'none' to output a blank image",
+                        "tooltip": "Select the image size variant to output through 'IMAGE'. Choose 'none' to output a blank image. For e6, anything below sample will be 'preview'",
                     },
                 ),
                 "format_tags": (
@@ -223,7 +230,7 @@ class GetBooruPost:
             exclude_tags_list = [
                 tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") for tag in user_excluded_tags
             ]
-            
+
             # remove tags in tags_dict that match the exclude_tags_list
             for key in tags_dict:
                 tags_dict[key] = ", ".join([tag for tag in tags_dict[key].split(", ") if tag not in exclude_tags_list])
