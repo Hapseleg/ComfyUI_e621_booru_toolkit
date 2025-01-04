@@ -5,7 +5,11 @@ import requests
 import torch
 from PIL import Image
 
-# note: gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
+user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
+headers = {"User-Agent": user_agent}
+
+# create a blank image tensor to use as a placeholder
+blank_img_tensor = torch.from_numpy(np.zeros((512, 512, 3), dtype=np.float32) / 255.0).unsqueeze(0)
 
 
 def to_tensor(image: Image):
@@ -29,7 +33,15 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
     return img_width, img_height
 
 
-def get_e621_post(response, scale_target, img_size, format_tags):
+def replace_characters(tags):
+    new_tags = []
+    for tag in tags:
+        new_tag = tag.replace("_", " ").replace("(", "\\(").replace(")", "\\)")
+    new_tags.append(new_tag)
+    return new_tags
+
+
+def get_e621_data(response, img_size):
     post = response.get("post", {})
     # NOTE: e621 has contributor key in tags, unused
     # Get tags, e6 tags are in a list instead of space separated string like dbr
@@ -38,101 +50,80 @@ def get_e621_post(response, scale_target, img_size, format_tags):
     artist_tags = ", ".join(tags.get("artist", []))
     copyright_tags = ", ".join(tags.get("copyright", []))
     character_tags = ", ".join(tags.get("character", []))
+    tags_dict = {
+        "general_tags": general_tags,
+        "character_tags": character_tags,
+        "copyright_tags": copyright_tags,
+        "artist_tags": artist_tags,
+    }
 
-    if format_tags:
-        general_tags = general_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        artist_tags = artist_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        copyright_tags = copyright_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        character_tags = character_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+    # Get image size and dimensions of original image
+    img_width = post.get("file", {}).get("width", 0)
+    img_height = post.get("file", {}).get("height", 0)
 
     if img_size == "none - don't download image":
-        # Create a blank placeholder image
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(64, 64, scale_target)
-        img_tensor = torch.from_numpy(
-            np.zeros((scaled_img_height, scaled_img_width, 3), dtype=np.float32) / 255.0
-        ).unsqueeze(0)
+        img_tensor = blank_img_tensor
 
     else:
-        # use original dimensions for scaling
-        img_width = post.get("file", {}).get("width", 0)
-        img_height = post.get("file", {}).get("height", 0)
-
-        # Select image size variant based on img_size, default to "file"'s url if not img_size
+        # Select image size variant based on img_size, default to "file" key's "url" value if not img_size
         image_url = post.get(img_size, {}).get("url", post.get("file", {}).get("url"))
 
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
-
         img_data = requests.get(image_url).content
-
         img_stream = io.BytesIO(img_data)
         image_ = Image.open(img_stream)
-
         img_tensor = to_tensor(image_)
 
     return (
         img_tensor,
-        general_tags,
-        character_tags,
-        copyright_tags,
-        artist_tags,
-        scaled_img_width,
-        scaled_img_height,
+        tags_dict,
+        img_width,
+        img_height,
     )
 
 
-def get_danbooru_post(response, scale_target, img_size, format_tags):
+def get_danbooru_data(response, img_size):
 
     # Get tags
     general_tags = response.get("tag_string_general", "").replace(" ", ", ")
     character_tags = response.get("tag_string_character", "").replace(" ", ", ")
     copyright_tags = response.get("tag_string_copyright", "").replace(" ", ", ")
     artist_tags = response.get("tag_string_artist", "").replace(" ", ", ")
+    tags_dict = {
+        "general_tags": general_tags,
+        "character_tags": character_tags,
+        "copyright_tags": copyright_tags,
+        "artist_tags": artist_tags,
+    }
 
-    if format_tags:
-        general_tags = general_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        character_tags = character_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        copyright_tags = copyright_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
-        artist_tags = artist_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+    # Get image size and dimensions of original image
+    img_width = response.get("image_width", 0)
+    img_height = response.get("image_height", 0)
 
     if img_size == "none - don't download image":
-        # Create a blank placeholder image
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(64, 64, scale_target)
-        img_tensor = torch.from_numpy(
-            np.zeros((scaled_img_height, scaled_img_width, 3), dtype=np.float32) / 255.0
-        ).unsqueeze(0)
+        img_tensor = blank_img_tensor
 
     else:
         # Get image size variant for selected variant and output desired image size
         variants = response.get("media_asset", {}).get("variants", [])
-
         selected_variant = next((variant for variant in variants if variant["type"] == img_size), None)
 
         if selected_variant:
             image_url = selected_variant["url"]
             img_width = selected_variant["width"]
             img_height = selected_variant["height"]
-        else:  # fallback
+        else:  # fallback to original image
             image_url = response.get("file_url")
-            img_width = response.get("image_width", 0)
-            img_height = response.get("image_height", 0)
-
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
 
         img_data = requests.get(image_url).content
-
         img_stream = io.BytesIO(img_data)
         image_ = Image.open(img_stream)
-
         img_tensor = to_tensor(image_)
 
     return (
         img_tensor,
-        general_tags,
-        character_tags,
-        copyright_tags,
-        artist_tags,
-        scaled_img_width,
-        scaled_img_height,
+        tags_dict,
+        img_width,
+        img_height,
     )
 
 
@@ -170,10 +161,21 @@ class GetBooruPost:
                     "BOOLEAN",
                     {"default": True, "tooltip": "Removes underscores and adds backslashes to brackets if set to True"},
                 ),
-                # "clean_tags": (
-                #     "BOOLEAN",
-                #     {"default": False, "tooltip": "Removes tags before output based on blacklisted_tags.json located in the custom nodes folder for this node"},
-                # ),
+                "exclude_tags": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Removes tags before output based on textbox content below located in the custom nodes folder for this node",
+                    },
+                ),
+                "tags_to_exclude": (
+                    "STRING",
+                    {
+                        "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621 post recursion, e621_comment",
+                        "multiline": True,
+                        "tooltip": "Enter tags you don't want outputted. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
+                    },
+                ),
             }
         }
 
@@ -190,7 +192,7 @@ class GetBooruPost:
     FUNCTION = "get_data"
     CATEGORY = "Danbooru"
 
-    def get_data(self, url, scale_target, img_size, format_tags):
+    def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, tags_to_exclude):
         # Check if URL already ends with .json
         if ".json" not in url:
             # Split URL into base and query parts if it contains a query
@@ -201,8 +203,8 @@ class GetBooruPost:
                 sep = ""
                 query = ""
 
-            # Add .json to the base URL for JSON API
             # todo: doesnt work for gelbooru
+            # gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
             json_url = base_url + ".json"
 
             # Remake full URL with query part, if any, maybe not needed
@@ -211,19 +213,36 @@ class GetBooruPost:
         else:
             json_url = url
 
-        user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
-        headers = {"User-Agent": user_agent}
-        
-        # todo: check if e6 api format or dbr, or other, needs to try 
+        # todo: check if e6 api format or dbr, or other, needs to try
         if "e621" in json_url or "e926" in json_url:
-            
-
             response = requests.get(json_url, headers=headers).json()
+            img_tensor, tags_dict, img_width, img_height = get_e621_data(response, img_size)
 
-            return get_e621_post(response, scale_target, img_size, format_tags)
         else:
             response = requests.get(json_url, headers=headers).json()
-            return get_danbooru_post(response, scale_target, img_size, format_tags)
+            img_tensor, tags_dict, img_width, img_height = get_danbooru_data(response, img_size)
+
+        # scale image to diffusion-compatible size
+        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
+
+        if exclude_tags:  # convert tags_to_exclude to list and make it use same format as og
+            exclude_tags_list = [tag.strip().replace(" ", "_") for tag in tags_to_exclude.split(",")]
+            for key in tags_dict:
+                tags_dict[key] = [tag for tag in tags_dict[key] if tag not in exclude_tags_list]
+
+        if format_tags:  # should run last
+            for key in tags_dict:
+                tags_dict[key] = replace_characters(tags_dict[key])
+
+        return (
+            img_tensor,
+            tags_dict["general_tags"],
+            tags_dict["character_tags"],
+            tags_dict["copyright_tags"],
+            tags_dict["artist_tags"],
+            scaled_img_width,
+            scaled_img_height,
+        )
 
 
 # whatever this does idk but im leaving this here
