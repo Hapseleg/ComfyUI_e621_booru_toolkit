@@ -33,14 +33,6 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
     return img_width, img_height
 
 
-def replace_characters(tags):
-    new_tags = []
-    for tag in tags:
-        new_tag = tag.replace("_", " ").replace("(", "\\(").replace(")", "\\)")
-    new_tags.append(new_tag)
-    return new_tags
-
-
 def get_e621_data(response, img_size):
     post = response.get("post", {})
     # NOTE: e621 has contributor key in tags, unused
@@ -168,7 +160,7 @@ class GetBooruPost:
                         "tooltip": "Removes tags before output based on textbox content below located in the custom nodes folder for this node",
                     },
                 ),
-                "tags_to_exclude": (
+                "user_excluded_tags": (
                     "STRING",
                     {
                         "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621 post recursion, e621_comment",
@@ -192,7 +184,7 @@ class GetBooruPost:
     FUNCTION = "get_data"
     CATEGORY = "Danbooru"
 
-    def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, tags_to_exclude):
+    def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, user_excluded_tags):
         # Check if URL already ends with .json
         if ".json" not in url:
             # Split URL into base and query parts if it contains a query
@@ -225,14 +217,21 @@ class GetBooruPost:
         # scale image to diffusion-compatible size
         scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
 
-        if exclude_tags:  # convert tags_to_exclude to list and make it use same format as og
-            exclude_tags_list = [tag.strip().replace(" ", "_") for tag in tags_to_exclude.split(",")]
+        if exclude_tags:
+            # convert user_excluded_tags to a list and format it properly to match tags_dict
+            user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
+            exclude_tags_list = [
+                tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") for tag in user_excluded_tags
+            ]
+            print(exclude_tags_list)
+            print(tags_dict)
+            # remove tags in tags_dict that match the exclude_tags_list
             for key in tags_dict:
-                tags_dict[key] = [tag for tag in tags_dict[key] if tag not in exclude_tags_list]
+                tags_dict[key] = ", ".join([tag for tag in tags_dict[key].split(", ") if tag not in exclude_tags_list])
 
         if format_tags:  # should run last
             for key in tags_dict:
-                tags_dict[key] = replace_characters(tags_dict[key])
+                tags_dict[key] = tags_dict[key].replace("_", " ").replace("(", "\\(").replace(")", "\\)")
 
         return (
             img_tensor,
