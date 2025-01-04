@@ -29,7 +29,7 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
     return img_width, img_height
 
 
-def process_e621(response, scale_target, img_size, format_tags):
+def get_e621_post(response, scale_target, img_size, format_tags):
     post = response.get("post", {})
     # NOTE: e621 has contributor key in tags, unused
     # Get tags, e6 tags are in a list instead of space separated string like dbr
@@ -80,7 +80,7 @@ def process_e621(response, scale_target, img_size, format_tags):
     )
 
 
-def process_danbooru(response, scale_target, img_size, format_tags):
+def get_danbooru_post(response, scale_target, img_size, format_tags):
 
     # Get tags
     general_tags = response.get("tag_string_general", "").replace(" ", ", ")
@@ -202,6 +202,7 @@ class GetBooruPost:
                 query = ""
 
             # Add .json to the base URL for JSON API
+            # todo: doesnt work for gelbooru
             json_url = base_url + ".json"
 
             # Remake full URL with query part, if any, maybe not needed
@@ -210,19 +211,19 @@ class GetBooruPost:
         else:
             json_url = url
 
-        # todo: check if e6 api format or dbr, or other
+        user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
+        headers = {"User-Agent": user_agent}
+        
+        # todo: check if e6 api format or dbr, or other, needs to try 
         if "e621" in json_url or "e926" in json_url:
-            user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
-
-            # Headers including Authorization and User-Agent
-            headers = {"User-Agent": user_agent}
+            
 
             response = requests.get(json_url, headers=headers).json()
 
-            return process_e621(response, scale_target, img_size, format_tags)
+            return get_e621_post(response, scale_target, img_size, format_tags)
         else:
-            response = requests.get(json_url).json()
-            return process_danbooru(response, scale_target, img_size, format_tags)
+            response = requests.get(json_url, headers=headers).json()
+            return get_danbooru_post(response, scale_target, img_size, format_tags)
 
 
 # whatever this does idk but im leaving this here
