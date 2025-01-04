@@ -213,7 +213,7 @@ class GetBooruPost:
         # todo: check if e6 api format or dbr, or other
         if "e621" in json_url or "e926" in json_url:
             api_key = " "
-            user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on e621)"
+            user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"
 
             # Headers including Authorization and User-Agent
             headers = {
@@ -222,7 +222,6 @@ class GetBooruPost:
             }
 
             response = requests.get(json_url, headers=headers).json()
-            print(response.json())
 
             return process_e621(response, scale_target, img_size, format_tags)
         else:
