@@ -223,8 +223,7 @@ class GetBooruPost:
             exclude_tags_list = [
                 tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") for tag in user_excluded_tags
             ]
-            print(exclude_tags_list)
-            print(tags_dict)
+            
             # remove tags in tags_dict that match the exclude_tags_list
             for key in tags_dict:
                 tags_dict[key] = ", ".join([tag for tag in tags_dict[key].split(", ") if tag not in exclude_tags_list])
