@@ -38,15 +38,12 @@ def get_e621_data(response, img_size):
     # NOTE: e621 has contributor key in tags, unused
     # Get tags, e6 tags are in a list instead of space separated string like dbr
     tags = post.get("tags", {})
-    general_tags = ", ".join(tags.get("general", []))
-    artist_tags = ", ".join(tags.get("artist", []))
-    copyright_tags = ", ".join(tags.get("copyright", []))
-    character_tags = ", ".join(tags.get("character", []))
     tags_dict = {
-        "general_tags": general_tags,
-        "character_tags": character_tags,
-        "copyright_tags": copyright_tags,
-        "artist_tags": artist_tags,
+        "general_tags": ", ".join(tags.get("general", [])),
+        "character_tags": ", ".join(tags.get("artist", [])),
+        "copyright_tags": ", ".join(tags.get("copyright", [])),
+        "artist_tags": ", ".join(tags.get("character", [])),
+        "species_tags": ", ".join(tags.get("species", [])),
     }
 
     # Get image size of original image | "file" key in json response
@@ -83,15 +80,12 @@ def get_e621_data(response, img_size):
 def get_danbooru_data(response, img_size):
 
     # Get tags
-    general_tags = response.get("tag_string_general", "").replace(" ", ", ")
-    character_tags = response.get("tag_string_character", "").replace(" ", ", ")
-    copyright_tags = response.get("tag_string_copyright", "").replace(" ", ", ")
-    artist_tags = response.get("tag_string_artist", "").replace(" ", ", ")
     tags_dict = {
-        "general_tags": general_tags,
-        "character_tags": character_tags,
-        "copyright_tags": copyright_tags,
-        "artist_tags": artist_tags,
+        "general_tags": response.get("tag_string_general", "").replace(" ", ", "),
+        "character_tags": response.get("tag_string_character", "").replace(" ", ", "),
+        "copyright_tags": response.get("tag_string_copyright", "").replace(" ", ", "),
+        "artist_tags": response.get("tag_string_artist", "").replace(" ", ", "),
+        "species_tags": "",  # danbooru doesn't have this
     }
 
     # Get image size and dimensions of original image
@@ -178,13 +172,14 @@ class GetBooruPost:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING", "STRING", "INT", "INT")
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING", "STRING", "STRING", "INT", "INT")
     RETURN_NAMES = (
         "IMAGE",
         "GENERAL_TAGS",
         "CHARACTER_TAGS",
         "COPYRIGHT_TAGS",
         "ARTIST_TAGS",
+        "E6_SPECIES_TAGS",
         "SCALED_WIDTH",
         "SCALED_HEIGHT",
     )
@@ -245,6 +240,7 @@ class GetBooruPost:
             tags_dict["character_tags"],
             tags_dict["copyright_tags"],
             tags_dict["artist_tags"],
+            tags_dict["species_tags"],
             scaled_img_width,
             scaled_img_height,
         )
