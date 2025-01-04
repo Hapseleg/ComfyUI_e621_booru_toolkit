@@ -49,7 +49,7 @@ def get_e621_data(response, img_size):
         "artist_tags": artist_tags,
     }
 
-    # Get image size and dimensions of original image
+    # Get image size of original image | "file" key in json response
     img_width = post.get("file", {}).get("width", 0)
     img_height = post.get("file", {}).get("height", 0)
 
@@ -164,7 +164,7 @@ class GetBooruPost:
                     "BOOLEAN",
                     {
                         "default": True,
-                        "tooltip": "Removes tags before output based on textbox content below located in the custom nodes folder for this node",
+                        "tooltip": "Removes tags before output based on textbox content below",
                     },
                 ),
                 "user_excluded_tags": (
