@@ -1,0 +1,15 @@
+{
+    "dbr": [
+        "banned_artist",
+        "original"
+    ],
+    "e621": [
+        "conditional_dnp",
+        "sound_warning",
+        "unknown_artist",
+        "third-party_edit",
+        "anonymous_artist",
+        "e621_post_recursion",
+        "e621_comment"
+    ]
+}

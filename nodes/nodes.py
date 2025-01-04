@@ -5,6 +5,8 @@ import requests
 import torch
 from PIL import Image
 
+# note: gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=11234062&json=1
+
 
 def to_tensor(image: Image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
@@ -27,8 +29,58 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
     return img_width, img_height
 
 
-def process_danbooru(json_url, scale_target, img_size, format_tags):
-    response = requests.get(json_url).json()
+def process_e621(response, scale_target, img_size, format_tags):
+    post = response.get("post", {})
+    # NOTE: e621 has contributor list in tags, unused
+    # Get tags, e6 tags are in a list instead of space separated string like dbr
+    tags = post.get("tags", {})
+    general_tags = ", ".join(tags.get("general", []))
+    artist_tags = ", ".join(tags.get("artist", []))
+    copyright_tags = ", ".join(tags.get("copyright", []))
+    character_tags = ", ".join(tags.get("character", []))
+
+    if format_tags:
+        general_tags = general_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+        artist_tags = artist_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+        copyright_tags = copyright_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+        character_tags = character_tags.replace("_", " ").replace("(", "\(").replace(")", "\)")
+
+    if img_size == "none - don't download image":
+        # Create a blank placeholder image
+        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(64, 64, scale_target)
+        img_tensor = torch.from_numpy(
+            np.zeros((scaled_img_height, scaled_img_width, 3), dtype=np.float32) / 255.0
+        ).unsqueeze(0)
+
+    else:
+        # use original dimensions for scaling
+        img_width = post.get("file", {}).get("width", 0)
+        img_height = post.get("file", {}).get("height", 0)
+
+        # Select image size variant based on img_size, default to "file"'s url if not img_size
+        image_url = post.get(img_size, {}).get("url", post.get("file", {}).get("url"))
+
+        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
+
+        img_data = requests.get(image_url).content
+
+        img_stream = io.BytesIO(img_data)
+        image_ = Image.open(img_stream)
+
+        img_tensor = to_tensor(image_)
+
+    return (
+        img_tensor,
+        general_tags,
+        character_tags,
+        copyright_tags,
+        artist_tags,
+        scaled_img_width,
+        scaled_img_height,
+    )
+
+
+def process_danbooru(response, scale_target, img_size, format_tags):
 
     # Get tags
     general_tags = response.get("tag_string_general", "").replace(" ", ", ")
@@ -84,7 +136,7 @@ def process_danbooru(json_url, scale_target, img_size, format_tags):
     )
 
 
-class GetBooruImageInfo:
+class GetBooruPost:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -101,7 +153,7 @@ class GetBooruImageInfo:
                     },
                 ),
                 "img_size": (
-                    [  # todo: check if e621 has same format
+                    [
                         "none - don't download image",
                         "180x180",
                         "360x360",
@@ -118,6 +170,10 @@ class GetBooruImageInfo:
                     "BOOLEAN",
                     {"default": True, "tooltip": "Removes underscores and adds backslashes to brackets if set to True"},
                 ),
+                # "clean_tags": (
+                #     "BOOLEAN",
+                #     {"default": False, "tooltip": "Removes tags before output based on blacklisted_tags.json located in the custom nodes folder for this node"},
+                # ),
             }
         }
 
@@ -153,9 +209,28 @@ class GetBooruImageInfo:
                 json_url = json_url + sep + query
         else:
             json_url = url
+        print(json_url)  #
+        print(" aaa ")
+        print(requests.get(json_url))
 
-        # todo: check if
-        return process_danbooru(json_url, scale_target, img_size, format_tags)
+        # todo: check if e6 api format or dbr, or other
+        if "e621" in json_url or "e926" in json_url:
+            api_key = " "
+            user_agent = "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on e621)"
+
+            # Headers including Authorization and User-Agent
+            headers = {
+                # "Authorization": "Basic " + api_key,
+                "User-Agent": user_agent
+            }
+
+            response = requests.get(json_url, headers=headers)
+            print(response.json())
+
+            return process_e621(response, scale_target, img_size, format_tags)
+        else:
+            response = requests.get(json_url).json()
+            return process_danbooru(response, scale_target, img_size, format_tags)
 
 
 # whatever this does idk but im leaving this here
