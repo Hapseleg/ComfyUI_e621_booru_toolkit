@@ -162,7 +162,7 @@ class GetBooruPost:
                 ),
                 "user_excluded_tags": (
                     "STRING",
-                    { # todo: load defaulst from file maybe
+                    {  # todo: load defaulst from file maybe
                         "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621, e621 post recursion, e621_comment, patreon, patreon logo, patreon username, text, dialogue",
                         "multiline": True,
                         "tooltip": "Enter tags you don't want outputted. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
@@ -183,7 +183,7 @@ class GetBooruPost:
         "SCALED_HEIGHT",
     )
     FUNCTION = "get_data"
-    CATEGORY = "Danbooru"
+    CATEGORY = "E621 Booru Toolkit"
 
     def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, user_excluded_tags):
         # Check if URL already ends with .json
