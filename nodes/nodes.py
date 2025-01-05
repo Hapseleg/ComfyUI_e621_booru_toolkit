@@ -145,7 +145,7 @@ class GetBooruPost:
                         "original",
                     ],
                     {
-                        "default": "none - don't download image",
+                        "default": "sample",
                         "tooltip": "Select the image size variant to output through 'IMAGE'. Choose 'none' to output a blank image. For e6, anything below sample will be 'preview'",
                     },
                 ),
