@@ -34,7 +34,7 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
 
 def get_e621_data(response, img_size):
     post = response.get("post", {})
-    # NOTE: e621 has contributor key in tags, unused
+    # NOTE: e621 has contributor key in tags since 18th dec., not useful for image gen 
     # Get tags, e6 tags are in a list instead of space separated string like dbr
     tags = post.get("tags", {})
     tags_dict = {
@@ -61,7 +61,7 @@ def get_e621_data(response, img_size):
         image_url = post.get(img_size, {}).get("url")
 
         if not image_url:  # fallback
-            image_url = post.get("preview", {}).get("url")
+            image_url = post.get("file", {}).get("url")
 
         img_data = requests.get(image_url).content
         img_stream = io.BytesIO(img_data)
@@ -162,7 +162,7 @@ class GetBooruPost:
                 ),
                 "user_excluded_tags": (
                     "STRING",
-                    {  # todo: load defaulst from file maybe
+                    {  # todo: load defaults from file maybe
                         "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621, e621 post recursion, e621_comment, patreon, patreon logo, patreon username, instagram username, text, dialogue",
                         "multiline": True,
                         "tooltip": "Enter tags you don't want outputted. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
@@ -186,7 +186,9 @@ class GetBooruPost:
     CATEGORY = "E621 Booru Toolkit"
 
     def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, user_excluded_tags):
-        # Check if URL already ends with .json
+        # Check if URL already ends with .json, can be improved 
+        # todo: doesnt work for gelbooru
+        # gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
         if ".json" not in url:
             # Split URL into base and query parts if it contains a query
             if "?" in url:
@@ -196,8 +198,6 @@ class GetBooruPost:
                 sep = ""
                 query = ""
 
-            # todo: doesnt work for gelbooru
-            # gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
             json_url = base_url + ".json"
 
             # Remake full URL with query part, if any, maybe not needed
