@@ -34,7 +34,7 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
 
 def get_e621_data(response, img_size):
     post = response.get("post", {})
-    # NOTE: e621 has contributor key in tags since 18th dec., not useful for image gen 
+    # NOTE: e621 has contributor key in tags since 18th dec., not useful for image gen
     # Get tags, e6 tags are in a list instead of space separated string like dbr
     tags = post.get("tags", {})
     tags_dict = {
@@ -186,8 +186,9 @@ class GetBooruPost:
     CATEGORY = "E621 Booru Toolkit"
 
     def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, user_excluded_tags):
-        # Check if URL already ends with .json, can be improved 
-        # todo: doesnt work for gelbooru
+        # Check if URL already ends with .json
+        # todo: doesnt work for gelbooru, safebooru, similar
+        # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
         # gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
         if ".json" not in url:
             # Split URL into base and query parts if it contains a query
@@ -206,8 +207,8 @@ class GetBooruPost:
         else:
             json_url = url
 
-        # todo: check if e6 api format or dbr, or other, needs to try
-        if "e621" in json_url or "e926" in json_url:
+        # todo: check if e6 api format or dbr, or other, needs to get api response first
+        if json_url not in ["e621", "e926", "e6ai"]:
             response = requests.get(json_url, headers=headers).json()
             img_tensor, tags_dict, img_width, img_height = get_e621_data(response, img_size)
 
@@ -216,6 +217,7 @@ class GetBooruPost:
             img_tensor, tags_dict, img_width, img_height = get_danbooru_data(response, img_size)
 
         # scale image to diffusion-compatible size
+        # todo: rework calculation, does not use scale_target as medium but likely as lowest for either width or height
         scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
 
         if exclude_tags:
