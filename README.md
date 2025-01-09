@@ -1,5 +1,7 @@
 # ComfyUI e621 booru Toolkit
 
+this repo and the nodes may be called toolkit, but after making the single node that just fetches a post's image and tags i dont know what to add anymore so ill probably rename the repo to whatever fits to what it currently does, post fetcher or something
+
 For now: just custom node to fetch tags from a given danbooru e621 post link (and sites with api responses similar to danbooru)
 
 
