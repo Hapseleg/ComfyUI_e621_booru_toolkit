@@ -124,7 +124,7 @@ class GetBooruPost:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "url": ("STRING", {"multiline": False, "tooltip": "Enter the URL of the Danbooru post"}),
+                "url": ("STRING", {"multiline": False, "tooltip": "Enter the URL of the Danbooru/e621 post"}),
                 "scale_target": (
                     "INT",
                     {
@@ -208,7 +208,7 @@ class GetBooruPost:
             json_url = url
 
         # todo: check if e6 api format or dbr, or other, needs to get api response first
-        if json_url not in ["e621", "e926", "e6ai"]:
+        if any(keyword in json_url for keyword in ["e621", "e926", "e6ai"]):
             response = requests.get(json_url, headers=headers).json()
             img_tensor, tags_dict, img_width, img_height = get_e621_data(response, img_size)
 
