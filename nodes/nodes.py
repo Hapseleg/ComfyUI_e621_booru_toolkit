@@ -1,4 +1,6 @@
 import io
+import re
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import requests
@@ -32,7 +34,7 @@ def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
     return img_width, img_height
 
 
-def get_e621_data(response, img_size):
+def get_e621_post_data(response, img_size):
     post = response.get("post", {})
     # NOTE: e621 has contributor key in tags since 18th dec., not useful for image gen
     # Get tags, e6 tags are in a list instead of space separated string like dbr
@@ -76,7 +78,7 @@ def get_e621_data(response, img_size):
     )
 
 
-def get_danbooru_data(response, img_size):
+def get_danbooru_post_data(response, img_size):
 
     # Get tags
     tags_dict = {
@@ -210,11 +212,11 @@ class GetBooruPost:
         # todo: check if e6 api format or dbr, or other, needs to get api response first
         if any(keyword in json_url for keyword in ["e621", "e926", "e6ai"]):
             response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, img_width, img_height = get_e621_data(response, img_size)
+            img_tensor, tags_dict, img_width, img_height = get_e621_post_data(response, img_size)
 
-        else:
+        else:  # danbooru used / used as fallback
             response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, img_width, img_height = get_danbooru_data(response, img_size)
+            img_tensor, tags_dict, img_width, img_height = get_danbooru_post_data(response, img_size)
 
         # scale image to diffusion-compatible size
         # todo: rework calculation, does not use scale_target as medium but likely as lowest for either width or height
@@ -245,6 +247,71 @@ class GetBooruPost:
             scaled_img_width,
             scaled_img_height,
         )
+
+
+class TagWikiFetch:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "tag": ("STRING",),
+                "booru": (["danbooru", "e621, e6ai, e926"], {"default": "danbooru"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "get_wiki_data"
+    OUTPUT_NODE = True
+
+    CATEGORY = "E621 Booru Toolkit"
+
+    def get_wiki_data(self, tag, booru):
+        # Escape brackets and replace spaces with underscores after stripping whitespace
+        tag = re.sub(r"(?<!\\)([()])", r"\\\1", tag.strip().replace(" ", "_"))
+
+        if booru == "e621, e6ai, e926":
+            url = "https://e621.net/wiki_pages.json"
+            params = {"title": tag}
+        elif booru == "danbooru":
+            url = "https://danbooru.donmai.us/wiki_pages.json"
+            params = {"search[title]": tag, "limit": 1}
+        else:
+            return {
+                "ui": {"text": "If this appears then poopy uh yeah idk what wrong"},
+                "result": "If this appears then poopy uh yeah idk what wrong",
+            }
+
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            response.raise_for_status()  # Raises HTTPError for 4xx or 5xx
+            # data = response.json()
+            # print(response.text)
+            # return {
+            #     "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
+            #     "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
+            # }
+            if booru == "e621, e6ai, e926":
+                data = response.json()
+                if data:
+                    wiki_page = data[0]  # Extract the first wiki page
+                    result = wiki_page.get("body", "No description found.")
+                    return {"ui": {"text": result}, "result": (result,)}
+                else:
+                    return {
+                        "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
+                        "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
+                    }
+
+            # Handle Danbooru API response (response is a list of dictionaries)
+            elif booru == "danbooru":
+                data = response.json()
+                if data:
+                    wiki_page = data[0]  # Extract the first wiki page
+                    result = wiki_page.get("body", "No description found.")
+                    return {"ui": {"text": result}, "result": (result,)}
+
+        except requests.exceptions.HTTPError as e:
+            raise RuntimeError(f"Error occurred: {e} - Code: {response.status_code} - Response: {response.text}")
 
 
 # whatever this does idk but im leaving this here
