@@ -16,8 +16,8 @@ app.registerExtension({
                 onConfigure?.apply(this, arguments);
 // BLESS DEEPSEEK V3
                 // Add a button widget
-                this.addWidget("button", "Click Me", "Button", () => {
-                    alert("Button clicked!");
+                this.addWidget("button", "I don't do anything", "Button", () => {
+                    alert("Button clicked! u stink btw");
                 });
             };
 
