@@ -1,9 +1,8 @@
 # ComfyUI e621 booru Toolkit
 
-this repo and the nodes may be called toolkit, but after making the single node that just fetches a post's image and tags i dont know what to add anymore so ill probably rename the repo to whatever fits to what it currently does, post fetcher or something
+~~For now just~~ has a custom node to fetch tags from a given danbooru e621 post link (and sites with api responses similar to danbooru)
 
-For now: just custom node to fetch tags from a given danbooru e621 post link (and sites with api responses similar to danbooru)
-
+new-ish: theres a node thats kinda barebones but it takes in a tag and outputs the wiki page of that tag, i want it to work with a button but idk javascript :(
 
 old-ish image:
 ![workflow image](./workflow.png)
