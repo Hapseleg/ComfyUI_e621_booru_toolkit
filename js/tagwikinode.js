@@ -41,7 +41,7 @@ app.registerExtension({
                 // Create a new text widget to display the input string
                 const widget = ComfyWidgets["STRING"](this, "text", ["STRING", { multiline: true }], app).widget;
                 widget.inputEl.readOnly = true;
-                widget.inputEl.style.opacity = 0.85; // Adjust opacity for better readability
+                widget.inputEl.style.opacity = 0.9; // Adjust opacity for better readability
                 widget.value = message.text.join(""); // Display all strings in the list, separated by newlines
 
                 // Resize the widget to fit the text, doesn't resize node

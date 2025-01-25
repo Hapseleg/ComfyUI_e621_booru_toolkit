@@ -270,7 +270,7 @@ class TagWikiFetch:
         tag = re.sub(r"(?<!\\)([()])", r"\\\1", tag.strip().replace(" ", "_"))
 
         if booru == "e621, e6ai, e926":
-            url = "https://e621.net/wiki_pages.json"
+            url = "https://e621.net/wiki_pages.json" # i kinda doubt e6ai or 926 have different wiki
             params = {"title": tag}
         elif booru == "danbooru":
             url = "https://danbooru.donmai.us/wiki_pages.json"
