@@ -257,8 +257,8 @@ class TagWikiFetch:
                 "tag": ("STRING",),
                 "booru": (["danbooru", "e621, e6ai, e926"], {"default": "danbooru"}),
                 "extended_info": (
-                    "BOOLEAN",
-                    {"default": False, "tooltip": "Include extended info of the wiki page response, mostly useless."},
+                    ["yes", "no", "only_extended"],
+                    {"default": "no", "tooltip": "Include extended info of the wiki page response, mostly useless."},
                 ),
             },
         }
@@ -288,13 +288,9 @@ class TagWikiFetch:
         try:
             response = requests.get(url, headers=headers, params=params)
             response.raise_for_status()  # Raises HTTPError for 4xx or 5xx
-            # data = response.json()
-            # print(response.text)
-            # return {
-            #     "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
-            #     "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
-            # }
+
             result = ""
+
             if booru == "e621, e6ai, e926":
                 data = response.json()
                 if data:
@@ -308,19 +304,25 @@ class TagWikiFetch:
                     wiki_page = data[0]  # Extract the first wiki page
                     result = wiki_page.get("body", "No description found.")
 
-            if extended_info:
+            if extended_info == "yes":
                 return {"ui": {"text": result}, "result": (result,)}
 
-            else:  # trim response to only important-ish parts, prone to error if no match possibly
+            else:  # trim response to only important-ish parts, prone to error if no match possibly, expect exception to be raised
                 match = re.search(r"h\d\.", result)
                 if match:
                     matches = result[: match.start()], result[match.start() :]
-                    return {"ui": {"text": matches[0]}, "result": (matches[0],)}
+                    if extended_info == "only_extended":
+                        return {"ui": {"text": matches[1]}, "result": (matches[1],)}
+                    else:
+                        return {"ui": {"text": matches[0]}, "result": (matches[0],)}
 
-            return {
-                "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
-                "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
-            }
+                else:
+                    return {"ui": {"text": result}, "result": (result,)}  # line prone to error?
+
+            # return {
+            #     "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
+            #     "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
+            # }
 
         except requests.exceptions.HTTPError as e:
             raise RuntimeError(f"Error occurred: {e} - Code: {response.status_code} - Response: {response.text}")
