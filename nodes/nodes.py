@@ -311,7 +311,7 @@ class TagWikiFetch:
             if extended_info:
                 return {"ui": {"text": result}, "result": (result,)}
 
-            else:  # trim response to only important-ish parts
+            else:  # trim response to only important-ish parts, prone to error if no match possibly
                 match = re.search(r"h\d\.", result)
                 if match:
                     matches = result[: match.start()], result[match.start() :]
