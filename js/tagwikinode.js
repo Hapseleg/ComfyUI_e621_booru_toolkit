@@ -29,7 +29,7 @@ app.registerExtension({
                 // Clear existing widgets (if any)
                 if (this.widgets) {
                     // Set the number of widgets to preserve (e.g., 2 for the first two widgets)
-                    const widgetsToPreserve = 3; // hardcoded thing because I don't know JS
+                    const widgetsToPreserve = 4; // hardcoded thing because I don't know JS
 
                     // Remove widgets starting from the end to avoid index issues
                     for (let i = this.widgets.length - 1; i >= widgetsToPreserve; i--) {

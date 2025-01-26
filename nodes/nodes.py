@@ -256,6 +256,10 @@ class TagWikiFetch:
             "required": {
                 "tag": ("STRING",),
                 "booru": (["danbooru", "e621, e6ai, e926"], {"default": "danbooru"}),
+                "extended_info": (
+                    "BOOLEAN",
+                    {"default": False, "tooltip": "Include extended info of the wiki page response, mostly useless."},
+                ),
             },
         }
 
@@ -265,12 +269,12 @@ class TagWikiFetch:
 
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_wiki_data(self, tag, booru):
+    def get_wiki_data(self, tag, booru, extended_info):
         # Escape brackets and replace spaces with underscores after stripping whitespace
         tag = re.sub(r"(?<!\\)([()])", r"\\\1", tag.strip().replace(" ", "_"))
 
         if booru == "e621, e6ai, e926":
-            url = "https://e621.net/wiki_pages.json" # i kinda doubt e6ai or 926 have different wiki
+            url = "https://e621.net/wiki_pages.json"  # i kinda doubt e6ai or 926 have different wiki
             params = {"title": tag}
         elif booru == "danbooru":
             url = "https://danbooru.donmai.us/wiki_pages.json"
@@ -290,17 +294,12 @@ class TagWikiFetch:
             #     "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
             #     "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
             # }
+            result = ""
             if booru == "e621, e6ai, e926":
                 data = response.json()
                 if data:
                     wiki_page = data[0]  # Extract the first wiki page
                     result = wiki_page.get("body", "No description found.")
-                    return {"ui": {"text": result}, "result": (result,)}
-                else:
-                    return {
-                        "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
-                        "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
-                    }
 
             # Handle Danbooru API response (response is a list of dictionaries)
             elif booru == "danbooru":
@@ -308,7 +307,20 @@ class TagWikiFetch:
                 if data:
                     wiki_page = data[0]  # Extract the first wiki page
                     result = wiki_page.get("body", "No description found.")
-                    return {"ui": {"text": result}, "result": (result,)}
+
+            if extended_info:
+                return {"ui": {"text": result}, "result": (result,)}
+
+            else:  # trim response to only important-ish parts
+                match = re.search(r"h\d\.", result)
+                if match:
+                    matches = result[: match.start()], result[match.start() :]
+                    return {"ui": {"text": matches[0]}, "result": (matches[0],)}
+
+            return {
+                "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
+                "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
+            }
 
         except requests.exceptions.HTTPError as e:
             raise RuntimeError(f"Error occurred: {e} - Code: {response.status_code} - Response: {response.text}")
