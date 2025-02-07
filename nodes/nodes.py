@@ -1,4 +1,5 @@
 import io
+import math
 import re
 from typing import Any, Dict, List, Tuple
 
@@ -17,21 +18,26 @@ def to_tensor(image: Image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 
-def calculate_dimensions_for_diffusion(img_width, img_height, zoom):
-    # Ensure dimensions are divisible by 64
-    def make_divisible_by_64(x):
-        return (x // 64) * 64
+def calculate_dimensions_for_diffusion(img_width, img_height, scale_target_avg, multiples_of=64):
+    # Calculate the average of the original dimensions.
+    # This average will be scaled to be near the scale_target_avg.
+    original_avg = (img_width + img_height) / 2.0
 
-    img_max_length = min(img_width, img_height)
-    img_zoom = zoom / img_max_length
+    # Determine the scaling factor to get the average near the target.
+    scale_factor = scale_target_avg / original_avg
 
-    img_width = int(img_width * img_zoom)
-    img_height = int(img_height * img_zoom)
+    # Scale the dimensions while preserving the aspect ratio.
+    new_width = round(img_width * scale_factor)  # rounding because output can be 1023.9999999999
+    new_height = round(img_height * scale_factor)
 
-    img_width = make_divisible_by_64(img_width)
-    img_height = make_divisible_by_64(img_height)
+    # Adjust the scaled dimensions to be multiples of
+    new_width = (new_width // multiples_of) * multiples_of
+    new_height = (new_height // multiples_of) * multiples_of
 
-    return img_width, img_height
+    return (
+        int(new_width),
+        int(new_height),
+    )
 
 
 def get_e621_post_data(response, img_size):
@@ -90,8 +96,8 @@ def get_danbooru_post_data(response, img_size):
     }
 
     # Get image size and dimensions of original image
-    img_width = response.get("image_width", 0)
-    img_height = response.get("image_height", 0)
+    original_img_width = response.get("image_width", 0)
+    original_img_height = response.get("image_height", 0)
 
     if img_size == "none - don't download image":
         img_tensor = blank_img_tensor
@@ -116,8 +122,8 @@ def get_danbooru_post_data(response, img_size):
     return (
         img_tensor,
         tags_dict,
-        img_width,
-        img_height,
+        original_img_width,
+        original_img_height,
     )
 
 
@@ -127,14 +133,14 @@ class GetBooruPost:
         return {
             "required": {
                 "url": ("STRING", {"multiline": False, "tooltip": "Enter the URL of the Danbooru/e621 post"}),
-                "scale_target": (
+                "scale_target_avg": (
                     "INT",
                     {
                         "default": 1024,
                         "min": 64,
                         "max": 16384,
-                        "step": 8,
-                        "tooltip": "[BETA] Calculates the image's width/height to be close to the scale target and be divisible by 64, keeping the aspect ratio. Use 1024 for SDXL",
+                        "step": 64, # add multiples_of option and then allow different step sizes although usually not needed
+                        "tooltip": "[BETA] Calculates the image's width and height so it's average is close to the scale_target_avg value while keeping the aspect ratio as close to original as possible. Use 1024 for SDXL",
                     },
                 ),
                 "img_size": (
@@ -173,7 +179,7 @@ class GetBooruPost:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING", "STRING", "STRING", "INT", "INT")
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING", "STRING", "STRING", "INT", "INT", "INT", "INT")
     RETURN_NAMES = (
         "IMAGE",
         "GENERAL_TAGS",
@@ -183,11 +189,13 @@ class GetBooruPost:
         "E6_SPECIES_TAGS",
         "SCALED_WIDTH",
         "SCALED_HEIGHT",
+        "ORIGINAL_WIDTH",
+        "ORIGINAL_HEIGHT",
     )
     FUNCTION = "get_data"
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_data(self, url, scale_target, img_size, format_tags, exclude_tags, user_excluded_tags):
+    def get_data(self, url, scale_target_avg, img_size, format_tags, exclude_tags, user_excluded_tags):
         # Check if URL already ends with .json
         # todo: doesnt work for gelbooru, safebooru, similar
         # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
@@ -214,13 +222,18 @@ class GetBooruPost:
             response = requests.get(json_url, headers=headers).json()
             img_tensor, tags_dict, img_width, img_height = get_e621_post_data(response, img_size)
 
-        else:  # danbooru used / used as fallback
+        # elif: # for other sites
+
+        else:  # danbooru used / used as fallback for now
             response = requests.get(json_url, headers=headers).json()
             img_tensor, tags_dict, img_width, img_height = get_danbooru_post_data(response, img_size)
 
+        # print(f"E621 Booru Toolkit DEBUG - Possibly unsupported site? Using danbooru as fallback. URL: {json_url}")
+
         # scale image to diffusion-compatible size
-        # todo: rework calculation, does not use scale_target as medium but likely as lowest for either width or height
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(img_width, img_height, scale_target)
+        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(
+            img_width, img_height, scale_target_avg
+        )
 
         if exclude_tags:
             # convert user_excluded_tags to a list and format it properly to match tags_dict
@@ -246,6 +259,8 @@ class GetBooruPost:
             tags_dict["species_tags"],
             scaled_img_width,
             scaled_img_height,
+            img_width,
+            img_height,
         )
 
 
