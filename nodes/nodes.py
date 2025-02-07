@@ -218,19 +218,19 @@ class GetBooruPost:
         # todo: check if e6 api format or dbr, or other, needs to get api response first
         if any(keyword in json_url for keyword in ["e621", "e926", "e6ai"]):
             response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, img_width, img_height = get_e621_post_data(response, img_size)
+            img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(response, img_size)
 
         # elif: # for other sites
 
         else:  # danbooru used / used as fallback for now
             response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, img_width, img_height = get_danbooru_post_data(response, img_size)
+            img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
 
         # print(f"E621 Booru Toolkit DEBUG - Possibly unsupported site? Using danbooru as fallback. URL: {json_url}")
 
         # scale image to diffusion-compatible size
         scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(
-            img_width, img_height, scale_target_avg
+            og_img_width, og_img_height, scale_target_avg
         )
 
         if exclude_tags:
@@ -257,8 +257,8 @@ class GetBooruPost:
             tags_dict["species_tags"],
             scaled_img_width,
             scaled_img_height,
-            img_width,
-            img_height,
+            og_img_width,
+            og_img_height,
         )
 
 
