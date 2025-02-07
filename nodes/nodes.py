@@ -109,8 +109,6 @@ def get_danbooru_post_data(response, img_size):
 
         if selected_variant:
             image_url = selected_variant["url"]
-            img_width = selected_variant["width"]
-            img_height = selected_variant["height"]
         else:  # fallback to original image
             image_url = response.get("file_url")
 
