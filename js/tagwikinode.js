@@ -1,7 +1,6 @@
 // NOTE: i have almost 0 clue how any of this works
 
 import { app } from "../../scripts/app.js";
-import { ComfyWidgets } from "../../scripts/widgets.js";
 // NOTE: code for show text is taken from https://github.com/pythongosssss/ComfyUI-Custom-Scripts/blob/main/web/js/showText.js
 app.registerExtension({
     name: "BooruToolkit.TagWikiNode",
@@ -11,7 +10,7 @@ app.registerExtension({
             const onConfigure = nodeType.prototype.onConfigure;
             
             // Override the onConfigure method to add a button
-            nodeType.prototype.onConfigure = function () {
+            nodeType.prototype.onNodeCreated = function () {
                 // Call the original onConfigure method if it exists
                 onConfigure?.apply(this, arguments);
 // BLESS DEEPSEEK V3
