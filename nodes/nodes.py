@@ -137,7 +137,7 @@ class GetBooruPost:
                         "default": 1024,
                         "min": 64,
                         "max": 16384,
-                        "step": 64, # add multiples_of option and then allow different step sizes although usually not needed
+                        "step": 64,  # add multiples_of option and then allow different step sizes although usually not needed
                         "tooltip": "[BETA] Calculates the image's width and height so it's average is close to the scale_target_avg value while keeping the aspect ratio as close to original as possible. Use 1024 for SDXL",
                     },
                 ),
@@ -267,7 +267,7 @@ class TagWikiFetch:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "tag": ("STRING",),
+                "tags": ("STRING",),
                 "booru": (["danbooru", "e621, e6ai, e926"], {"default": "danbooru"}),
                 "extended_info": (
                     ["yes", "no", "only_extended"],
@@ -282,16 +282,20 @@ class TagWikiFetch:
 
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_wiki_data(self, tag, booru, extended_info):
-        # Escape brackets and replace spaces with underscores after stripping whitespace
-        tag = re.sub(r"(?<!\\)([()])", r"\\\1", tag.strip().replace(" ", "_"))
+    def get_wiki_data(self, tags, booru, extended_info):
+        # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
+        tags = tags.replace(" ", "_")
+        tags = tags.replace("\\", "")
+        tags = ",".join(re.sub(r"^_+|_+$", "", tag) for tag in tags.split(","))
+
+        first_tag = tags.split(",")[0]  # temp
 
         if booru == "e621, e6ai, e926":
             url = "https://e621.net/wiki_pages.json"  # i kinda doubt e6ai or 926 have different wiki
-            params = {"title": tag}
+            params = {"title": first_tag}
         elif booru == "danbooru":
             url = "https://danbooru.donmai.us/wiki_pages.json"
-            params = {"search[title]": tag, "limit": 1}
+            params = {"search[title]": first_tag, "limit": 1}
         else:
             return {
                 "ui": {"text": "If this appears then poopy uh yeah idk what wrong"},
