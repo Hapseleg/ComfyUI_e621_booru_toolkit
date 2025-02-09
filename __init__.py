@@ -9,7 +9,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "GetBooruPost": "Fetch e621/Booru Post",
-    "TagWikiFetch": "Tag Wiki Lookup (Beta)",  # todo: i really need better names for these
+    "TagWikiFetch": "Tag Wiki Lookup",  # todo: i really need better names for these
     "TagEncode": "Tag Encode (old)",
 }
 
