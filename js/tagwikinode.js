@@ -47,7 +47,7 @@ app.registerExtension({
                                 "Content-Type": "application/json",
                             },
                             body: JSON.stringify(requestData),
-                        });
+                        }); // https://docs.comfy.org/essentials/comfyui-server/comms_routes#custom-routes bit different but ig it works eh
 
                         // Handle response
                         const result = await response.json();
