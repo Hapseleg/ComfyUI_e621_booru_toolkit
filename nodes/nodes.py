@@ -1,7 +1,4 @@
 import io
-import math
-import re
-from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import requests
