@@ -1,15 +1,15 @@
 [project]
 name = "e621_booru_toolkit"
-description = ""
+description = "WIP. Nodes: Fetch e621/danbooru image and/or tags etc from a given URL; Get the Wiki entry for a tag through a button press."
 version = "0.1.0"
-license = {file = "LICENSE"}
-dependencies = ["numpy", "torch", "requests", "pillow"]
+license = { file = "LICENSE" }
+dependencies = ["aiohttp", "numpy", "pillow", "requests", "torch"]
 
 [project.urls]
 Repository = "https://github.com/DraconicDragon/ComfyUI_e621_booru_toolkit"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "drac"
 DisplayName = "ComfyUI_e621_booru_toolkit"
 Icon = ""
