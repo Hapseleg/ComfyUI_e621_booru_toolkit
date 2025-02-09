@@ -1,4 +1,5 @@
 from .nodes.nodes import *
+from .pyserver import get_tag_wiki_data
 
 NODE_CLASS_MAPPINGS = {
     "GetBooruPost": GetBooruPost,

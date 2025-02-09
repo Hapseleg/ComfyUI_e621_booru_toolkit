@@ -8,6 +8,7 @@ import requests
 import torch
 from PIL import Image
 
+
 headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github)"}
 
 # create a blank image tensor to use as a placeholder
@@ -282,6 +283,8 @@ class TagWikiFetch:
 
     CATEGORY = "E621 Booru Toolkit"
 
+
+    
     def get_wiki_data(self, tags, booru, extended_info):
         # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
         tags = tags.replace(" ", "_")
