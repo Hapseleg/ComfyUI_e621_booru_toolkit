@@ -286,7 +286,7 @@ class TagWikiFetch:
         # todo: call from pyserver/get_tag_wiki_data.py and remove code here
         # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
         tags = tags.replace(" ", "_")
-        tags = re.sub(r"_+", "_", tags)  # change more than 2 underscores next to each other to single
+        tags = re.sub(r"(?<=\w)_+", "_", tags)  # change more than 2 underscores next to each other to single
         tags = tags.replace("\\", "")
         tags = ",".join(re.sub(r"^_+|_+$", "", tag) for tag in tags.split(","))
 

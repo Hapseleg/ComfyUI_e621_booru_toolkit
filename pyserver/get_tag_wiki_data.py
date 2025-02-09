@@ -8,13 +8,13 @@ headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on g
 
 
 @PromptServer.instance.routes.post("/booru/tag_wiki")
-async def handle_tag_wiki(request, booru="danbooru", extended_info="no"):
+async def handle_tag_wiki(request):
     try:
         data = await request.json()
         tags = data.get("tag", "")
+        booru = data.get("booru", "danbooru")
+        extended_info = data.get("extended_info", "yes")
         node_id = data.get("node_id", "")
-
-        processed_data = f"got tags: {tags}"
 
         # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
         tags = tags.replace(" ", "_")
@@ -55,7 +55,7 @@ async def handle_tag_wiki(request, booru="danbooru", extended_info="no"):
                     result = wiki_page.get("body", "No description found.")
 
             if extended_info == "yes":
-                return {"ui": {"text": result}, "result": (result,)}
+                return web.json_response({"status": "success", "data": result, "node_id": node_id})
 
             else:  # trim response to only important-ish parts, prone to error if no match possibly, expect exception to be raised
                 match = re.search(r"h\d\.", result)

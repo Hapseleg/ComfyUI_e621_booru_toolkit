@@ -17,25 +17,28 @@ app.registerExtension({
                 onConfigure?.apply(this, arguments);
                 // BLESS DEEPSEEK V3
                 // Add a button widget
-                // todo: parse booru setting and extended info to server
+
                 const buttonWidget = this.addWidget("button", "Fetch Wiki", "Button", async () => {
                     buttonWidget.disabled = true;
                     buttonWidget.name = "Loading...";
                     this.onResize?.(this.computeSize()); // Refresh the UI
 
                     try {
-                        // Get the value from the first widget (string input)
-                        const tagInputWidget = this.widgets[0]; // First widget
-                        if (!tagInputWidget) {
-                            throw new Error("No input widget found!");
+                        // Get values from all three widgets
+                        const tagInputWidget = this.widgets[0];    // "tags" string input
+                        const booruWidget = this.widgets[1];       // "booru" dropdown
+                        const extendedInfoWidget = this.widgets[2]; // "extended_info" dropdown
+
+                        if (!tagInputWidget || !booruWidget || !extendedInfoWidget) {
+                            throw new Error("Missing required widgets!");
                         }
 
-                        const tagValue = tagInputWidget.value; // Get the value
-
-                        // Prepare request data
+                        // Prepare request data with all values
                         const requestData = {
-                            tag: tagValue, // Use the value from the widget
-                            node_id: this.id,
+                            tag: tagInputWidget.value,
+                            booru: booruWidget.value,
+                            extended_info: extendedInfoWidget.value,
+                            node_id: this.id
                         };
 
                         // Send request to Python endpoint
@@ -79,7 +82,7 @@ app.registerExtension({
                 } else {
                     resultText = JSON.stringify(message); // Fallback to stringifying the object
                 }
-                alert(resultText)
+                //alert(resultText)
                 updateTextWidget(this, resultText);
             };
         }
