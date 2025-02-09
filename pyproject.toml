@@ -1,0 +1,15 @@
+[project]
+name = "e621_booru_toolkit"
+description = ""
+version = "0.1.0"
+license = {file = "LICENSE"}
+dependencies = ["numpy", "torch", "requests", "pillow"]
+
+[project.urls]
+Repository = "https://github.com/DraconicDragon/ComfyUI_e621_booru_toolkit"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI_e621_booru_toolkit"
+Icon = ""
