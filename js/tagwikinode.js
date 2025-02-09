@@ -10,22 +10,20 @@ app.registerExtension({
         if (nodeData.name === "TagWikiFetch") {
             // Store the original onConfigure method
             const onConfigure = nodeType.prototype.onConfigure;
-            
+
             // Override the onConfigure method to add a button
             nodeType.prototype.onNodeCreated = function () {
                 // Call the original onConfigure method if it exists
                 onConfigure?.apply(this, arguments);
-// BLESS DEEPSEEK V3
+                // BLESS DEEPSEEK V3
                 // Add a button widget
                 // todo: parse booru setting and extended info to server
                 const buttonWidget = this.addWidget("button", "Fetch Wiki", "Button", async () => {
                     buttonWidget.disabled = true;
                     buttonWidget.name = "Loading...";
+                    this.onResize?.(this.computeSize()); // Refresh the UI
 
                     try {
-                        
-                        this.onResize?.(this.computeSize()); // Refresh the UI
-
                         // Get the value from the first widget (string input)
                         const tagInputWidget = this.widgets[0]; // First widget
                         if (!tagInputWidget) {
@@ -48,7 +46,6 @@ app.registerExtension({
                             },
                             body: JSON.stringify(requestData),
                         });
-                        
 
                         // Handle response
                         const result = await response.json();
@@ -65,19 +62,25 @@ app.registerExtension({
                         updateTextWidget(this, error);
                     } finally {
                         // Revert button text to "Fetch Wiki"
-                        buttonWidget.name = "Fetch Wiki"; // Reset the label
+                        buttonWidget.name = "Fetch Wiki";
                         buttonWidget.disabled = false;
+                        this.onResize?.(this.computeSize()); // Refresh the UI
                     }
                 });
             };
-
 
             // Create a text widget to display the input string
             const onExecuted = nodeType.prototype.onExecuted;
             nodeType.prototype.onExecuted = function (message) {
                 onExecuted?.apply(this, arguments);
-
-                updateTextWidget(this, message);
+                let resultText = message?.text;
+                if (Array.isArray(resultText)) {
+                    resultText = resultText.join(""); // Join array elements into a single string
+                } else {
+                    resultText = JSON.stringify(message); // Fallback to stringifying the object
+                }
+                alert(resultText)
+                updateTextWidget(this, resultText);
             };
         }
     },
@@ -87,7 +90,7 @@ app.registerExtension({
 // Reusable function to update the text widget
 function updateTextWidget(node, message) {
     //alert(`stink ${JSON.stringify(message)}`);
-    
+
     // Clear existing widgets (if any)
     if (node.widgets) {
         // Set the number of widgets to preserve (e.g., 2 for the first two widgets)
@@ -103,7 +106,7 @@ function updateTextWidget(node, message) {
     // Create a new text widget to display the input string
     const widget = ComfyWidgets["STRING"](node, "text", ["STRING", { multiline: true }], app).widget;
     widget.inputEl.readOnly = true;
-    widget.inputEl.style.opacity = 0.9; // Adjust opacity for better readability
+    widget.inputEl.style.opacity = 0.925; // Adjust opacity for better readability
     //widget.value = message.text.join(""); // Display all strings in the list, separated by newlines
     widget.value = message; // Display all strings in the list, separated by newlines
 

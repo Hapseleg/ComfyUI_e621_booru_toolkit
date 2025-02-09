@@ -9,7 +9,6 @@ headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on g
 
 @PromptServer.instance.routes.post("/booru/tag_wiki")
 async def handle_tag_wiki(request, booru="danbooru", extended_info="no"):
-    print("hi")
     try:
         data = await request.json()
         tags = data.get("tag", "")
@@ -19,7 +18,7 @@ async def handle_tag_wiki(request, booru="danbooru", extended_info="no"):
 
         # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
         tags = tags.replace(" ", "_")
-        tags = re.sub(r"_+", "_", tags)  # change more than 2 underscores next to each other to single
+        tags = re.sub(r"(?<=\w)_+", "_", tags)  # remove too much extra underscores
         tags = tags.replace("\\", "")
         tags = ",".join(re.sub(r"^_+|_+$", "", tag) for tag in tags.split(","))
 
