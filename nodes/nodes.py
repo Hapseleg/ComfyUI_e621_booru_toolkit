@@ -297,68 +297,15 @@ class TagWikiFetch:
     CATEGORY = "E621 Booru Toolkit"
 
     def get_wiki_data(self, tags, booru, extended_info):
-        # todo: call from pyserver/get_tag_wiki_data.py and remove code here
-        # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
-        tags = tags.replace(" ", "_")
-        tags = re.sub(r"(?<=\w)_+", "_", tags)  # change more than 2 underscores next to each other to single
-        tags = tags.replace("\\", "")
-        tags = ",".join(re.sub(r"^_+|_+$", "", tag) for tag in tags.split(","))
 
-        first_tag = tags.split(",")[0]  # temp
+        import asyncio
 
-        if booru == "e621, e6ai, e926":
-            url = "https://e621.net/wiki_pages.json"  # i kinda doubt e6ai or 926 have different wiki
-            params = {"title": first_tag}
-        elif booru == "danbooru":
-            url = "https://danbooru.donmai.us/wiki_pages.json"
-            params = {"search[title]": first_tag, "limit": 1}
-        else:
-            return {
-                "ui": {"text": "If this appears then poopy uh yeah idk what wrong"},
-                "result": "If this appears then poopy uh yeah idk what wrong",
-            }
+        from ..pyserver import get_tag_wiki_data
 
-        try:
-            response = requests.get(url, headers=headers, params=params)
-            response.raise_for_status()  # Raises HTTPError for 4xx or 5xx
+        response = asyncio.run(get_tag_wiki_data.fetch_wiki_data(tags, booru, extended_info))
 
-            result = ""
-
-            if booru == "e621, e6ai, e926":
-                data = response.json()
-                if data:
-                    wiki_page = data[0]  # Extract the first wiki page
-                    result = wiki_page.get("body", "No description found.")
-
-            # Handle Danbooru API response (response is a list of dictionaries)
-            elif booru == "danbooru":
-                data = response.json()
-                if data:
-                    wiki_page = data[0]  # Extract the first wiki page
-                    result = wiki_page.get("body", "No description found.")
-
-            if extended_info == "yes":
-                return {"ui": {"text": result}, "result": (result,)}
-
-            else:  # trim response to only important-ish parts, prone to error if no match possibly, expect exception to be raised
-                match = re.search(r"h\d\.", result)
-                if match:
-                    matches = result[: match.start()], result[match.start() :]
-                    if extended_info == "only_extended":
-                        return {"ui": {"text": matches[1]}, "result": (matches[1],)}
-                    else:
-                        return {"ui": {"text": matches[0]}, "result": (matches[0],)}
-
-                else:
-                    return {"ui": {"text": result}, "result": (result,)}  # line prone to error?
-
-            # return {
-            #     "ui": {"text": f"Nothing found? Code:{response.status_code} Response:{response.text}"},
-            #     "result": f"Nothing found? Code:{response.status_code} Response:{response.text}",
-            # }
-
-        except requests.exceptions.HTTPError as e:
-            raise RuntimeError(f"Error occurred: {e} - Code: {response.status_code} - Response: {response.text}")
+        data = response.get("data", "")
+        return {"ui": {"text": data}, "result": (data,)}
 
 
 # whatever this does idk but im leaving this here
