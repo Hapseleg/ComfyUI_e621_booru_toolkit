@@ -51,9 +51,9 @@ app.registerExtension({
                         // Process successful response
                         const responseData = result.data || "Received empty response";
                 
-                        updateTextWidget(this, responseData); // Call the reusable function
+                        updateTextWidget(this, responseData);
                     } catch (error) {
-                        alert("error?")
+                        alert(`error? ${error}`);
                         updateTextWidget(this, error);
                     }
                 });
@@ -74,9 +74,9 @@ app.registerExtension({
 
 // Reusable function to update the text widget
 function updateTextWidget(node, message) {
+    //alert(`stink ${JSON.stringify(message)}`);
+    
     // Clear existing widgets (if any)
-    alert(`stink ${JSON.stringify(message)}`);
-
     if (node.widgets) {
         // Set the number of widgets to preserve (e.g., 2 for the first two widgets)
         const widgetsToPreserve = 4; // hardcoded thing because I don't know JS
