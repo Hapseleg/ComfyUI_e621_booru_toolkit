@@ -3,7 +3,6 @@
 import { app } from "../../scripts/app.js";
 import { ComfyWidgets } from "../../scripts/widgets.js";
 
-//NOTE: code for show text is taken from https://github.com/pythongosssss/ComfyUI-Custom-Scripts/blob/main/web/js/showText.js
 app.registerExtension({
     name: "BooruToolkit.TagWikiNode",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
