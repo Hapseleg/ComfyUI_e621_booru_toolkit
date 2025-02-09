@@ -17,22 +17,29 @@ app.registerExtension({
                 onConfigure?.apply(this, arguments);
 // BLESS DEEPSEEK V3
                 // Add a button widget
-                this.addWidget("button", "Fetch Wiki", "Button", async () => {
+                // todo: parse booru setting and extended info to server
+                const buttonWidget = this.addWidget("button", "Fetch Wiki", "Button", async () => {
+                    buttonWidget.disabled = true;
+                    buttonWidget.name = "Loading...";
+
                     try {
+                        
+                        this.onResize?.(this.computeSize()); // Refresh the UI
+
                         // Get the value from the first widget (string input)
                         const tagInputWidget = this.widgets[0]; // First widget
                         if (!tagInputWidget) {
                             throw new Error("No input widget found!");
                         }
-                
+
                         const tagValue = tagInputWidget.value; // Get the value
-                
+
                         // Prepare request data
                         const requestData = {
                             tag: tagValue, // Use the value from the widget
                             node_id: this.id,
                         };
-                
+
                         // Send request to Python endpoint
                         const response = await fetch("/booru/tag_wiki", {
                             method: "POST",
@@ -41,20 +48,25 @@ app.registerExtension({
                             },
                             body: JSON.stringify(requestData),
                         });
-                
+                        
+
                         // Handle response
                         const result = await response.json();
                         if (result.error) {
                             throw new Error(result.error);
                         }
-                
+
                         // Process successful response
-                        const responseData = result.data || "Received empty response";
-                
+                        const responseData = result.data || "Received empty response - Likely nothing found.";
+
                         updateTextWidget(this, responseData);
                     } catch (error) {
                         alert(`error? ${error}`);
                         updateTextWidget(this, error);
+                    } finally {
+                        // Revert button text to "Fetch Wiki"
+                        buttonWidget.name = "Fetch Wiki"; // Reset the label
+                        buttonWidget.disabled = false;
                     }
                 });
             };
