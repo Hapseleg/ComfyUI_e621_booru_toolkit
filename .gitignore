@@ -3,6 +3,7 @@ test.py
 js/test.js
 test.xml
 test.json
+default_exc*.json
 
 # vs setting
 .vscode/
