@@ -3,6 +3,7 @@
 ### Nodes
 
 ##### Fetch e621/Booru Post node
+
 Gets the image, tags and original + scaled image dimensions from a given danbooru or e621 post url.
 ![Main fetch node showcase](./assets_gh/main_fetch_node_showcase.png)
 `url`: insert any post url from e621 or danbooru (see Supported sites at the bottom)
@@ -12,6 +13,7 @@ Gets the image, tags and original + scaled image dimensions from a given danboor
 `exclude_tags`: excludes tags based on bottom textbox
 
 ##### Tag Wiki Lookup node
+
 Gets the wiki description of a given tag. Output is pretty barebones but it's probably enough for most people. Can be used standalone through the Fetch Wiki button (I wanted to make the output show as markdown like the Markdown Note node but me JS skills are like none)
 ![Tag Wiki Lookup node showcase](./assets_gh/tag_wiki_node_showcase.png)
 `tags`: input any tag you want to get the wiki description of
@@ -20,14 +22,17 @@ Gets the wiki description of a given tag. Output is pretty barebones but it's pr
 `Fetch Wiki Button`: You don't have to queue to get the wiki description. Since nothing is queued, it will only show the text in a read-only textbox in the node
 
 #### Supported sites
+
 (Note: there may be NSFW content if you visit these)
 
 - [Danbooru](https://danbooru.donmai.us)
 - [e621](https://e621.net/) / [e926](https://e926.net/) / [e6ai](https://e6ai.net)
 
-##### Useful nodes:
+You can find a few example workflows in the `example_workflows` folder.
 
-Show Text node and tag autocomplete as well as other possibly useful stuff from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
+##### Useful nodes
+
+Show Text node and tag autocomplete as well as other possibly useful stuff from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) (required by simple_t2i example workflow)
 Show Any node from [ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use) (required by just_the_nodes example workflow)
 
-this repo is originally a rewrite of: https://github.com/yffyhk/comfyui_auto_danbooru
+this repo is originally a rewrite of: <https://github.com/yffyhk/comfyui_auto_danbooru>
