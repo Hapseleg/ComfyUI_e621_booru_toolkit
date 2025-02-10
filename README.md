@@ -28,6 +28,6 @@ Gets the wiki description of a given tag. Output is pretty barebones but it's pr
 ##### Useful nodes:
 
 Show Text node and tag autocomplete as well as other possibly useful stuff from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
-Show Any node from [ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use)
+Show Any node from [ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use) (required by just_the_nodes example workflow)
 
 this repo is originally a rewrite of: https://github.com/yffyhk/comfyui_auto_danbooru
