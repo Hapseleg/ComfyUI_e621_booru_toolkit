@@ -5,7 +5,7 @@
 new-ish: theres a node thats kinda barebones but it takes in a tag and outputs the wiki page of that tag, i want it to work with a button but idk javascript :(
 
 old-ish image:
-![workflow image](./workflow.png)
+![workflow image](./example_workflows/workflow_old.png)
 
 Currently known sites to be supported:
 (Note: there may be NSFW content if you visit these)
