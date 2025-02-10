@@ -12,7 +12,7 @@ Gets the image, tags and original + scaled image dimensions from a given danboor
 `exclude_tags`: excludes tags based on bottom textbox
 
 ##### Tag Wiki Lookup node
-Gets the wiki description of a given tag. Output is pretty barebones but it's probably enough for most people. Can be used standalone through the Fetch Wiki button
+Gets the wiki description of a given tag. Output is pretty barebones but it's probably enough for most people. Can be used standalone through the Fetch Wiki button (I wanted to make the output show as markdown like the Markdown Note node but me JS skills are like none)
 ![Tag Wiki Lookup node showcase](./assets_gh/tag_wiki_node_showcase.png)
 `tags`: input any tag you want to get the wiki description of
 `booru`: select what image board site you want to get the info from
