@@ -28,11 +28,11 @@ Gets the wiki description of a given tag. Output is pretty barebones but it's pr
 - [Danbooru](https://danbooru.donmai.us)
 - [e621](https://e621.net/) / [e926](https://e926.net/) / [e6ai](https://e6ai.net)
 
-You can find a few example workflows in the `example_workflows` folder.
+You can find a few example workflows in the `example_workflows` folder. Simply dragging the images into ComfyUI should work.
 
 ##### Useful nodes
-
-Show Text node and tag autocomplete as well as other possibly useful stuff from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts) (required by simple_t2i example workflow)
+Good string join/concatenate node and a bunch of other stuff from [KJNodes](https://github.com/kijai/ComfyUI-KJNodes)  (required by simple_t2i example workflow)
+Show Text node and tag autocomplete as well as other possibly useful stuff from [ComfyUI-Custom-Scripts](https://github.com/pythongosssss/ComfyUI-Custom-Scripts)
 Show Any node from [ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use) (required by just_the_nodes example workflow)
 
 this repo is originally a rewrite of: <https://github.com/yffyhk/comfyui_auto_danbooru>
