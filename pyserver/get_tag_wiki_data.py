@@ -8,6 +8,7 @@ headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on g
 
 
 # use separate function to fetch wiki data for python node code so no interference from route
+# maybe this doesnt even work, i forgot if it did
 # also allows for faster debug without restarting server using ComfyUI-HotReloadHack because not in frozen route
 async def fetch_wiki_data(tags, booru, extended_info):
     # replace spaces with underscores, remove backslashes, strip leading/trailing underscores
