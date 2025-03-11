@@ -44,9 +44,9 @@ def get_e621_post_data(response, img_size):
     tags = post.get("tags", {})
     tags_dict = {
         "general_tags": ", ".join(tags.get("general", [])),
-        "character_tags": ", ".join(tags.get("artist", [])),
+        "character_tags": ", ".join(tags.get("character", [])),
         "copyright_tags": ", ".join(tags.get("copyright", [])),
-        "artist_tags": ", ".join(tags.get("character", [])),
+        "artist_tags": ", ".join(tags.get("artist", [])),
         "species_tags": ", ".join(tags.get("species", [])),
     }
 
