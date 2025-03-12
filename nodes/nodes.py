@@ -37,8 +37,10 @@ def calculate_dimensions_for_diffusion(img_width, img_height, scale_target_avg, 
     )
 
 
-def get_e621_post_data(response, img_size):
-    post = response.get("post", {})
+def get_e621_post_data(post, img_size):
+    # post = response.get("post", {})
+    # post = response
+    print(post)
     # NOTE: e621 has contributor key in tags since 18th dec., not useful for image gen
     # Get tags, e6 tags are in a list instead of space separated string like dbr
     tags = post.get("tags", {})
@@ -68,10 +70,13 @@ def get_e621_post_data(response, img_size):
         if not image_url:  # fallback
             image_url = post.get("file", {}).get("url")
 
-        img_data = requests.get(image_url).content
-        img_stream = io.BytesIO(img_data)
-        image_ = Image.open(img_stream)
-        img_tensor = to_tensor(image_)
+        if image_url != None:
+            img_data = requests.get(image_url).content
+            img_stream = io.BytesIO(img_data)
+            image_ = Image.open(img_stream)
+            img_tensor = to_tensor(image_)
+        else:
+            img_tensor = blank_img_tensor
 
     return (
         img_tensor,
@@ -82,7 +87,7 @@ def get_e621_post_data(response, img_size):
 
 
 def get_danbooru_post_data(response, img_size):
-
+    print(response)
     # Get tags
     tags_dict = {
         "general_tags": response.get("tag_string_general", "").replace(" ", ", "),
@@ -104,10 +109,12 @@ def get_danbooru_post_data(response, img_size):
         variants = response.get("media_asset", {}).get("variants", [])
         selected_variant = next((variant for variant in variants if variant["type"] == img_size), None)
 
+        print(selected_variant)
         if selected_variant:
             image_url = selected_variant["url"]
         else:  # fallback to original image
             image_url = response.get("file_url")
+        print(image_url)
 
         img_data = requests.get(image_url).content
         img_stream = io.BytesIO(img_data)
@@ -212,16 +219,28 @@ class GetBooruPost:
         else:
             json_url = url
 
+
+        match json_url:
+            case "e621" | "e926" | "e6ai":
+                response = requests.get(json_url, headers=headers).json()
+                post = response.get("post", {})
+                img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(post, img_size)
+            case _:
+                response = requests.get(json_url, headers=headers).json()
+                img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
+                
+
         # todo: check if e6 api format or dbr, or other, needs to get api response first
-        if any(keyword in json_url for keyword in ["e621", "e926", "e6ai"]):
-            response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(response, img_size)
+        # if any(keyword in json_url for keyword in ["e621", "e926", "e6ai"]):
+        #     response = requests.get(json_url, headers=headers).json()
+        #     post = response.get("post", {})
+        #     img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(post, img_size)
 
-        # elif: # for other sites
+        # # elif: # for other sites
 
-        else:  # danbooru used / used as fallback for now
-            response = requests.get(json_url, headers=headers).json()
-            img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
+        # else:  # danbooru used / used as fallback for now
+        #     response = requests.get(json_url, headers=headers).json()
+        #     img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
 
         # print(f"E621 Booru Toolkit DEBUG - Possibly unsupported site? Using danbooru as fallback. URL: {json_url}")
 
@@ -256,6 +275,182 @@ class GetBooruPost:
             scaled_img_height,
             og_img_width,
             og_img_height,
+        )
+
+class GetRandomBooruPost:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "site": (
+                    [
+                        "danbooru",
+                        "e621",
+                        "e926",
+                        "e6ai"
+                    ],
+                    {
+                        "default": "e621",
+                        "tooltip": "The booru site it should get a random post from"
+                    },
+                ),
+                "scale_target_avg": (
+                    "INT",
+                    {
+                        "default": 1024,
+                        "min": 64,
+                        "max": 16384,
+                        "step": 64,  # add multiples_of option and then allow different step sizes although usually not needed
+                        "tooltip": "[BETA] Calculates the image's width and height so it's average is close to the scale_target_avg value while keeping the aspect ratio as close to original as possible. Use 1024 for SDXL",
+                    },
+                ),
+                "img_size": (
+                    [
+                        "none - don't download image",
+                        "180x180",
+                        "360x360",
+                        "720x720",
+                        "sample",
+                        "original",
+                    ],
+                    {
+                        "default": "sample",
+                        "tooltip": "Select the image size variant to output through 'IMAGE'. Choose 'none' to output a blank image. For e6, anything below sample will be 'preview'",
+                    },
+                ),
+                "include_tags": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Removes tags before output based on textbox content below",
+                    },
+                ),
+                "user_included_tags": (
+                    "STRING",
+                    {  # todo: load defaults from file maybe
+                        "default": "bestiality",
+                        "multiline": True,
+                        "tooltip": "Enter tags you don't want outputted. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
+                    },
+                ),
+                "exclude_tags": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": "Excludes the tags from the search",
+                    },
+                ),
+                "user_excluded_tags": (
+                    "STRING",
+                    {  # todo: load defaults from file maybe
+                        "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621, e621 post recursion, e621_comment, patreon, patreon logo, patreon username, instagram username, text, dialogue",
+                        "multiline": True,
+                        "tooltip": "Enter tags want to exclude from the search query. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
+                    },
+                ),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE", "STRING", "STRING", "STRING", "STRING", "STRING", "INT", "INT", "INT", "INT","STRING")
+    RETURN_NAMES = (
+        "IMAGE",
+        "GENERAL_TAGS",
+        "CHARACTER_TAGS",
+        "COPYRIGHT_TAGS",
+        "ARTIST_TAGS",
+        "E6_SPECIES_TAGS",
+        "SCALED_WIDTH",
+        "SCALED_HEIGHT",
+        "ORIGINAL_WIDTH",
+        "ORIGINAL_HEIGHT",
+        "URL"
+    )
+    FUNCTION = "get_data"
+    CATEGORY = "E621 Booru Toolkit"
+
+    def get_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags):
+        # todo: doesnt work for gelbooru, safebooru, similar
+        # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
+        # gelbooru api url https://gelbooru.com/index.php?page=dapi&s=post&q=index&id=1&json=1
+        
+        match site:
+            case "danbooru":
+                #https://danbooru.donmai.us/posts/random.json?tags=-animated+...
+                base_url = "https://danbooru.donmai.us/posts/random.json?tags="
+                suffix_url = ""
+            case "e621":
+                base_url = "https://e621.net/posts.json?tags="
+                suffix_url = "%20order%3Arandom&limit=1"
+            case "e926":
+                base_url = "https://e926.net/posts.json?tags="
+                suffix_url = "%20order%3Arandom&limit=1"
+            case "e6ai":
+                base_url = "https://e6ai.net/posts.json?tags="
+                suffix_url = "%20order%3Arandom&limit=1"
+            case _:
+                #using danbooru as failsafe
+                base_url = "https://danbooru.donmai.us/posts.json/random?tags="
+                suffix_url = ""
+        
+        #animated stuff will break it all
+        tag_str = "-animated+"
+            
+        if include_tags:
+            user_included_tags = user_included_tags.replace(", ", ",").split(",")
+            for tag in user_included_tags:
+                tag_str += tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") + '+'
+            
+            
+        if exclude_tags:
+            user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
+            for tag in user_excluded_tags:
+                tag_str += '-' + tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") + '+'
+
+
+        #remove the extra + at the end
+        tag_str = tag_str[:-1]
+
+
+
+        full_url = base_url + tag_str + suffix_url
+        print(full_url)
+        response = requests.get(full_url, headers=headers).json()
+        
+        
+        # Check for success
+        if response.get("success", "") == False:
+            raise Exception(response.get("message", ""))
+        
+        match site:
+            case "danbooru":
+                img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
+            case "e621" | "e926" | "e6ai":
+                post = response.get("posts", [])
+                img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(post[0], img_size)
+            case _:
+                #danbooru as failsafe
+                img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
+        
+
+
+        # scale image to diffusion-compatible size
+        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(
+            og_img_width, og_img_height, scale_target_avg
+        )
+
+        
+        return (
+            img_tensor,
+            tags_dict["general_tags"],
+            tags_dict["character_tags"],
+            tags_dict["copyright_tags"],
+            tags_dict["artist_tags"],
+            tags_dict["species_tags"],
+            scaled_img_width,
+            scaled_img_height,
+            og_img_width,
+            og_img_height,
+            full_url,
         )
 
 
