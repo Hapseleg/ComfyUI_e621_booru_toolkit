@@ -1,31 +1,32 @@
 import io
-import enum
+from ..enums import *
 import numpy as np
 import requests
 import torch
+import json
 from PIL import Image
 
 # booru sites https://sinkaroid.github.io/booru/client/index.html
-class BooruSite(enum.Enum):
-    DANBOORU = "Danbooru"
-    E621 = "e621"
-    E926 = "e926"
-    E6AI = "e6ai"
-    GELBOORU = "Gelbooru"
-    RULE34 = "Rule34"
+# class BooruSite(enum.Enum):
+#     DANBOORU = "Danbooru"
+#     E621 = "e621"
+#     E926 = "e926"
+#     E6AI = "e6ai"
+#     GELBOORU = "Gelbooru"
+#     RULE34 = "Rule34"
     
-class BooruSiteURLs(enum.Enum):
-    DANBOORU = "https://danbooru.donmai.us/"
-    E621 = "https://e621.net/"
-    E926 = "https://e926.net/"
-    E6AI = "https://e6ai.net/"
-    GELBOORU = "https://gelbooru.com/index.php/"
-    RULE34 = "https://api.rule34.xxx/"
+# class BooruSiteURLs(enum.Enum):
+#     DANBOORU = "https://danbooru.donmai.us/"
+#     E621 = "https://e621.net/"
+#     E926 = "https://e926.net/"
+#     E6AI = "https://e6ai.net/"
+#     GELBOORU = "https://gelbooru.com/index.php/"
+#     RULE34 = "https://api.rule34.xxx/"
     
-class ContentRatings(enum.Enum):
-    SAFE = "Safe"
-    QUESTIONABLE = "Questionable"
-    EXPLICIT = "Explicit"
+# class ContentRatings(enum.Enum):
+#     SAFE = "Safe"
+#     QUESTIONABLE = "Questionable"
+#     EXPLICIT = "Explicit"
 
 # https://danbooru.donmai.us/posts/random.json?tags=
 # https://danbooru.donmai.us/posts/100.json
@@ -44,6 +45,27 @@ headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on g
 # create a blank image tensor to use as a placeholder
 blank_img_tensor = torch.from_numpy(np.zeros((512, 512, 3), dtype=np.float32) / 255.0).unsqueeze(0)
 
+#https://danbooru.donmai.us/wiki_pages/help:api
+#https://danbooru.donmai.us/wiki_pages/help%3Ausers
+#Feature	            No Account	 Member	  Gold	 Platinum	 Builder
+#Max tags per search	2	         2	      6	     No Limit	 No Limit
+def get_API_key(site, save_file=False, api_login="", api_key=""):
+    try:
+        with open("./api-secrets.json",'r') as f:
+            api_json = json.load(f)
+        if save_file:
+            api_json[site] = {"API_LOGIN": api_login, "API_KEY": api_key}
+            
+            # Save the updated JSON back to the file
+            with open("./api-secrets.json",'w') as f:
+                json.dump(api_json, f, indent=4) # Use indent for readability
+
+        if site in api_json: # Check for the specific site key
+            return api_json[site]["API_LOGIN"], api_json[site]["API_KEY"]
+        else:
+            return "", ""
+    except:
+        return "", ""
 
 def to_tensor(image: Image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
@@ -154,7 +176,6 @@ def get_rule34_post_data(post, img_size):
         img_height,
     )
     
-
 
 def get_danbooru_post_data(response, img_size):
     # print(response)
@@ -417,14 +438,6 @@ class GetRandomBooruPost:
                 ),
                 "seed":( "INT",{"default": 0 }),
             },
-            "optional": {
-                #https://danbooru.donmai.us/wiki_pages/help:api
-                #https://danbooru.donmai.us/wiki_pages/help%3Ausers
-                #Feature	            No Account	 Member	  Gold	 Platinum	 Builder
-                #Max tags per search	2	         2	      6	     No Limit	 No Limit
-                "API_LOGIN": ("STRING", {"default": "", "multiline": False, "tooltip": "LOGIN key for Danbooru"}),
-                "API_KEY": ("STRING", {"default": "", "multiline": False, "tooltip": "API key for Danbooru"}),
-            },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO", "prompt": "PROMPT"},
         }
 
@@ -445,7 +458,7 @@ class GetRandomBooruPost:
     FUNCTION = "get_random_data"
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, API_LOGIN=None, API_KEY=None, **kwargs):
+    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, **kwargs):
         # todo: doesnt work for gelbooru, safebooru, similar
         # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
         
@@ -456,7 +469,9 @@ class GetRandomBooruPost:
         match site:
             case BooruSite.DANBOORU.value:
                 base_url = f"{BooruSiteURLs.DANBOORU.value}posts/random.json?"
-                if API_LOGIN:
+                #check for api key in json
+                API_LOGIN, API_KEY = get_API_key(BooruSite.DANBOORU)
+                if API_LOGIN != "":
                     base_url += "login=" + API_LOGIN + "&"
                     base_url += "api_key=" + API_KEY + "&"
                 base_url += "tags="
