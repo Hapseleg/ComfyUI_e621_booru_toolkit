@@ -189,6 +189,17 @@ def get_danbooru_post_data(response, img_size):
         original_img_height,
     )
 
+def prepare_search_tags(tags = "", include_tags = True):
+    cleaned_tags = ""
+    for tag in tags.split(","):
+        stripped_tag = tag.strip()
+        if len(stripped_tag) > 0:
+            if not include_tags:
+                cleaned_tags += "-"
+            cleaned_tags += stripped_tag + '+'
+    cleaned_tags = cleaned_tags[:-1]
+
+    return(cleaned_tags)
 
 class GetBooruPost:
     @classmethod
@@ -519,17 +530,20 @@ class GetRandomBooruPost:
                     tag_str += ""
                     
             
+            
                 
             if include_tags:
-                user_included_tags = user_included_tags.replace(", ", ",").split(",")
-                for tag in user_included_tags:
-                    tag_str += tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+                # user_included_tags = user_included_tags.replace(", ", ",").split(",")
+                # for tag in user_included_tags:
+                #     tag_str += tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+                user_included_tags = prepare_search_tags(user_included_tags)
                 
                 
             if exclude_tags:
-                user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
-                for tag in user_excluded_tags:
-                    tag_str += '-' + tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+                # user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
+                # for tag in user_excluded_tags:
+                #     tag_str += '-' + tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+                user_excluded_tags = prepare_search_tags(user_excluded_tags, False)
 
             #remove the extra + at the end
             # if len(tag_str) > 0:
