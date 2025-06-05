@@ -5,40 +5,9 @@ import requests
 import torch
 import json
 from PIL import Image
+import os
 
-# booru sites https://sinkaroid.github.io/booru/client/index.html
-# class BooruSite(enum.Enum):
-#     DANBOORU = "Danbooru"
-#     E621 = "e621"
-#     E926 = "e926"
-#     E6AI = "e6ai"
-#     GELBOORU = "Gelbooru"
-#     RULE34 = "Rule34"
-    
-# class BooruSiteURLs(enum.Enum):
-#     DANBOORU = "https://danbooru.donmai.us/"
-#     E621 = "https://e621.net/"
-#     E926 = "https://e926.net/"
-#     E6AI = "https://e6ai.net/"
-#     GELBOORU = "https://gelbooru.com/index.php/"
-#     RULE34 = "https://api.rule34.xxx/"
-    
-# class ContentRatings(enum.Enum):
-#     SAFE = "Safe"
-#     QUESTIONABLE = "Questionable"
-#     EXPLICIT = "Explicit"
 
-# https://danbooru.donmai.us/posts/random.json?tags=
-# https://danbooru.donmai.us/posts/100.json
-
-# https://e6ai.net/posts.json?limit=1&tags=%20order%3Arandom
-# https://e621.net/posts/100.json
-
-# https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=sort%3arandom
-# https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&id=100
-
-# https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom
-# https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&id=100
 
 headers = {"User-Agent": "ComfyUI_e621_booru_toolkit/1.0 (by draconicdragon on github(Hapse fork))"}
 
@@ -51,13 +20,15 @@ blank_img_tensor = torch.from_numpy(np.zeros((512, 512, 3), dtype=np.float32) / 
 #Max tags per search	2	         2	      6	     No Limit	 No Limit
 def get_API_key(site, save_file=False, api_login="", api_key=""):
     try:
-        with open("./api-secrets.json",'r') as f:
+        # p = os.path.dirname(os.path.realpath(__file__))
+        file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "api-secrets.json")
+        with open(file_path,'r') as f:
             api_json = json.load(f)
         if save_file:
             api_json[site] = {"API_LOGIN": api_login, "API_KEY": api_key}
             
             # Save the updated JSON back to the file
-            with open("./api-secrets.json",'w') as f:
+            with open(file_path,'w') as f:
                 json.dump(api_json, f, indent=4) # Use indent for readability
 
         if site in api_json: # Check for the specific site key
@@ -69,7 +40,6 @@ def get_API_key(site, save_file=False, api_login="", api_key=""):
 
 def to_tensor(image: Image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
-
 
 def calculate_dimensions_for_diffusion(img_width, img_height, scale_target_avg, multiples_of=64):
     # Calculate the average of the original dimensions.
@@ -92,7 +62,6 @@ def calculate_dimensions_for_diffusion(img_width, img_height, scale_target_avg, 
         int(new_height),
     )
 
-#https://danbooru.donmai.us/posts/random.json?tags=1girl
 def get_e621_post_data(post, img_size):
     print(post.get("id", ""))
     # post = response.get("post", {})
@@ -289,6 +258,10 @@ class GetBooruPost:
     FUNCTION = "get_data"
     CATEGORY = "E621 Booru Toolkit"
 
+    # https://danbooru.donmai.us/posts/100.json
+    # https://e621.net/posts/100.json
+    # https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&id=100
+    # https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&id=100
     def get_data(self, url, scale_target_avg, img_size, format_tags, exclude_tags, user_excluded_tags):
         # Check if URL already ends with .json
         # todo: doesnt work for gelbooru, safebooru, similar
@@ -382,6 +355,12 @@ class GetRandomBooruPost:
                         "tooltip": "The booru site it should get a random post from"
                     },
                 ),
+                "content_rating": (
+                    [rating.value for rating in ContentRatings],
+                    {
+                        "default": ContentRatings.ANY.value
+                    }
+                ),
                 "scale_target_avg": (
                     "INT",
                     {
@@ -431,12 +410,13 @@ class GetRandomBooruPost:
                 "user_excluded_tags": (
                     "STRING",
                     {  # todo: load defaults from file maybe
-                        "default": "conditional dnp, sound_warning, unknown_artist, third-party_edit, anonymous_artist, e621, e621 post recursion, e621_comment, patreon, patreon logo, patreon username, instagram username, text, dialogue",
+                        "default": "animated",
                         "multiline": True,
                         "tooltip": "Enter tags want to exclude from the search query. Input should be comma separated like prompts (they can include underscore or spaces, with or without backslashes)",
                     },
                 ),
                 "seed":( "INT",{"default": 0 }),
+                "normalize_tags":("BOOLEAN", {"default": True, "tooltip": "Replace '_' with ' ' and (...) with \(...\)"}),
             },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO", "prompt": "PROMPT"},
         }
@@ -458,108 +438,166 @@ class GetRandomBooruPost:
     FUNCTION = "get_random_data"
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, **kwargs):
-        # todo: doesnt work for gelbooru, safebooru, similar
-        # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
-        
-        # https://danbooru.donmai.us/posts/random.json?tags=
-        # https://e6ai.net/posts.json?limit=1&tags=%20order%3Arandom
-        # https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=sort%3arandom
-        # https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom
-        match site:
-            case BooruSite.DANBOORU.value:
-                base_url = f"{BooruSiteURLs.DANBOORU.value}posts/random.json?"
-                #check for api key in json
-                API_LOGIN, API_KEY = get_API_key(BooruSite.DANBOORU)
-                if API_LOGIN != "":
-                    base_url += "login=" + API_LOGIN + "&"
-                    base_url += "api_key=" + API_KEY + "&"
-                base_url += "tags="
-            case BooruSite.E621.value:
-                base_url = f"{BooruSiteURLs.E621.value}posts.json?limit=1&tags=%20order%3Arandom"
-            case BooruSite.E926.value:
-                base_url = f"{BooruSiteURLs.E926.value}posts.json?limit=1&tags=%20order%3Arandom"
-            case BooruSite.E6AI.value:
-                base_url = f"{BooruSiteURLs.E6AI.value}posts.json?limit=1&tags=%20order%3Arandom"
-            case BooruSite.GELBOORU.value:
-                base_url = f"{BooruSiteURLs.GELBOORU.value}index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom"
-            case BooruSite.RULE34.value:
-                base_url = f"{BooruSiteURLs.RULE34.value}index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom"
-            case _:
-                print("Unsupported site")
-                raise Exception("Unsupported site")
-        
-        #animated stuff will break it all
-        tag_str = "-animated+"
-        tag_str = ""
-            
-        if include_tags:
-            user_included_tags = user_included_tags.replace(", ", ",").split(",")
-            for tag in user_included_tags:
-                tag_str += tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") + '+'
-            
-            
-        if exclude_tags:
-            user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
-            for tag in user_excluded_tags:
-                tag_str += '-' + tag.replace(" ", "_").replace("\\(", "(").replace("\\)", ")") + '+'
-
-        #remove the extra + at the end
-        if len(tag_str) > 0:
-            tag_str = tag_str[:-1]
-
-        full_url = base_url + tag_str
-        print(full_url)
-        response = requests.get(full_url, headers=headers)
+    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, normalize_tags, content_rating, **kwargs):
         try:
-            response = response.json()
+            # todo: doesnt work for gelbooru, safebooru, similar
+            # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
+            post_url = ""
+            tag_str = ""
+            # https://danbooru.donmai.us/posts/random.json?tags=
+            # https://e6ai.net/posts.json?limit=1&tags=%20order%3Arandom
+            # https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=sort%3arandom
+            # https://api.rule34.xxx/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom
+            match site:
+                case BooruSite.DANBOORU.value:
+                    base_url = f"{BooruSiteURLs.DANBOORU.value}/posts/random.json?"
+                    #check for api key in json
+                    API_LOGIN, API_KEY = get_API_key(BooruSite.DANBOORU.value)
+                    if API_LOGIN != "":
+                        base_url += "login=" + API_LOGIN + "&"
+                        base_url += "api_key=" + API_KEY + "&"
+                    base_url += "tags="
+                    post_url = f"{BooruSiteURLs.DANBOORU.value}/posts/"
+                case BooruSite.E621.value:
+                    base_url = f"{BooruSiteURLs.E621.value}/posts.json?limit=1&tags=%20order%3Arandom+"
+                    post_url = f"{BooruSiteURLs.E621.value}/posts/"
+                case BooruSite.E926.value:
+                    base_url = f"{BooruSiteURLs.E926.value}/posts.json?limit=1&tags=%20order%3Arandom+"
+                    post_url = f"{BooruSiteURLs.E926.value}/posts/"
+                case BooruSite.E6AI.value:
+                    base_url = f"{BooruSiteURLs.E6AI.value}/posts.json?limit=1&tags=%20order%3Arandom+"
+                    post_url = f"{BooruSiteURLs.E6AI.value}/posts/"
+                case BooruSite.GELBOORU.value:
+                    base_url = f"{BooruSiteURLs.GELBOORU.value}/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom+"
+                    post_url = f"{BooruSiteURLs.GELBOORU.value}?page=post&s=view&id="
+                    #https://gelbooru.com/index.php?page=post&s=view&id=
+                case BooruSite.RULE34.value:
+                    base_url = f"{BooruSiteURLs.RULE34.value}/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom+"
+                    post_url = f"{BooruSiteURLs.E621.value}?page=post&s=view&id="
+                    #https://rule34.xxx/index.php?page=post&s=view&id=
+                case _:
+                    print("Unsupported site")
+                    raise Exception("Unsupported site")
+                
+            #danbooru/gelbooru = GENERAL, SENSITIVE, QUESTIONABLE, EXPLICIT
+            #e621 etc/rule34 = SAFE, QUESTIONABLE, EXPLICIT
+            match content_rating:
+                case ContentRatings.GENERAL.value:
+                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
+                        tag_str += "rating:general"
+                    else:
+                        tag_str += "rating:safe"    
+                case ContentRatings.SENSITIVE.value:
+                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
+                        tag_str += "rating:sensitive"
+                    else:
+                        tag_str += "rating:questionable"
+                case ContentRatings.QUESTIONABLE.value:
+                    tag_str += "rating:questionable"
+                case ContentRatings.EXPLICIT.value:
+                    tag_str += "rating:explicit"
+                case ContentRatings.SAFE.value:
+                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
+                        tag_str += "rating:general"
+                    else:
+                        tag_str += "rating:safe"
+                        
+                case ContentRatings.SFW.value:
+                    if site == BooruSite.DANBOORU:
+                        tag_str += "is:sfw"
+                    elif site == BooruSite.GELBOORU:
+                        tag_str += "rating:general"
+                    else:
+                        tag_str += "rating:safe"
+                        
+                case ContentRatings.NSFW.value:
+                    if site == BooruSite.DANBOORU:
+                        tag_str += "is:nsfw"
+                    else:
+                        tag_str += "rating:explicit"
+                case _:
+                    tag_str += ""
+                    
+            
+                
+            if include_tags:
+                user_included_tags = user_included_tags.replace(", ", ",").split(",")
+                for tag in user_included_tags:
+                    tag_str += tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+                
+                
+            if exclude_tags:
+                user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
+                for tag in user_excluded_tags:
+                    tag_str += '-' + tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
+
+            #remove the extra + at the end
+            # if len(tag_str) > 0:
+            #     tag_str = tag_str[:-1]
+
+            full_url = base_url + tag_str
+            print(full_url)
+            response = requests.get(full_url, headers=headers)
+            try:
+                response = response.json()
+            except:
+                raise Exception("No posts found")
+            
+            # Check for success
+            if site != BooruSite.RULE34.value and response.get("success", "") == False:
+                raise Exception(response.get("message", ""))
+            
+            match site:
+                case BooruSite.DANBOORU.value:
+                    img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
+                    post_url += str(response["id"])
+                    
+                case BooruSite.E621.value | BooruSite.E926.value | BooruSite.E6AI.value:
+                    post = response.get("posts", [])
+                    img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(post[0] if post else {}, img_size)
+                    post_url += str(post[0]["id"])
+                    
+                case BooruSite.GELBOORU.value:
+                    post = response.get("post", [])
+                    img_tensor, tags_dict, og_img_width, og_img_height = get_rule34_post_data(post[0] if post else {}, img_size)
+                    post_url += str(post[0]["id"])
+                    
+                case BooruSite.RULE34.value:
+                    img_tensor, tags_dict, og_img_width, og_img_height = get_rule34_post_data(response[0] if response else {}, img_size)
+                    post_url += str(response[0]["id"])
+                case _:
+                    print("Unsupported site")
+                    raise Exception("Unsupported site")
+            
+
+            # scale image to diffusion-compatible size
+            scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(
+                og_img_width, og_img_height, scale_target_avg
+            )
+            
+            if normalize_tags:
+                for t in tags_dict:
+                    tags_dict[t] = tags_dict[t].replace("_", " ")
+                    tags_dict[t] = tags_dict[t].replace("(", "\(")
+                    tags_dict[t] = tags_dict[t].replace(")", "\)")
+
+            
+            return (
+                img_tensor,
+                tags_dict["general_tags"],
+                tags_dict["character_tags"],
+                tags_dict["copyright_tags"],
+                tags_dict["artist_tags"],
+                tags_dict["species_tags"],
+                scaled_img_width,
+                scaled_img_height,
+                og_img_width,
+                og_img_height,
+                post_url,
+            )
         except:
-            raise Exception("No posts found")
-        
-        # Check for success
-        if site != BooruSite.RULE34.value and response.get("success", "") == False:
-            raise Exception(response.get("message", ""))
-        
-        match site:
-            case BooruSite.DANBOORU.value:
-                img_tensor, tags_dict, og_img_width, og_img_height = get_danbooru_post_data(response, img_size)
-                
-            case BooruSite.E621.value | BooruSite.E926.value | BooruSite.E6AI.value:
-                post = response.get("posts", [])
-                img_tensor, tags_dict, og_img_width, og_img_height = get_e621_post_data(post[0] if post else {}, img_size)
-                
-            case BooruSite.GELBOORU.value:
-                post = response.get("post", [])
-                img_tensor, tags_dict, og_img_width, og_img_height = get_rule34_post_data(post[0] if post else {}, img_size)
-                
-            case BooruSite.RULE34.value:
-                # post = response[0]
-                img_tensor, tags_dict, og_img_width, og_img_height = get_rule34_post_data(response[0] if response else {}, img_size)
-                
-            case _:
-                print("Unsupported site")
-                raise Exception("Unsupported site")
-        
-
-        # scale image to diffusion-compatible size
-        scaled_img_width, scaled_img_height = calculate_dimensions_for_diffusion(
-            og_img_width, og_img_height, scale_target_avg
-        )
-
-        
-        return (
-            img_tensor,
-            tags_dict["general_tags"],
-            tags_dict["character_tags"],
-            tags_dict["copyright_tags"],
-            tags_dict["artist_tags"],
-            tags_dict["species_tags"],
-            scaled_img_width,
-            scaled_img_height,
-            og_img_width,
-            og_img_height,
-            full_url,
-        )
+            print(response)
+            raise Exception("Failed")
 
 
 class TagWikiFetch:

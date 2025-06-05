@@ -9,14 +9,20 @@ class BooruSite(enum.Enum):
     RULE34 = "Rule34"
     
 class BooruSiteURLs(enum.Enum):
-    DANBOORU = "https://danbooru.donmai.us/"
-    E621 = "https://e621.net/"
-    E926 = "https://e926.net/"
-    E6AI = "https://e6ai.net/"
-    GELBOORU = "https://gelbooru.com/index.php/"
-    RULE34 = "https://api.rule34.xxx/"
+    DANBOORU = "https://danbooru.donmai.us"
+    E621 = "https://e621.net"
+    E926 = "https://e926.net"
+    E6AI = "https://e6ai.net"
+    GELBOORU = "https://gelbooru.com/index.php"
+    RULE34 = "https://api.rule34.xxx"
     
 class ContentRatings(enum.Enum):
-    SAFE = "Safe"
+    ANY = "Any rating"
+    GENERAL = "General"
+    SENSITIVE = "Sensitive"
     QUESTIONABLE = "Questionable"
     EXPLICIT = "Explicit"
+    SAFE = "Safe"
+    SFW = "SFW"
+    NSFW = "NSFW"
+    
