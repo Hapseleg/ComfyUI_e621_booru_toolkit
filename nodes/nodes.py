@@ -192,7 +192,7 @@ def get_danbooru_post_data(response, img_size):
 def prepare_search_tags(tags = "", include_tags = True):
     cleaned_tags_list = []
     for tag in tags.split(","):
-        stripped_tag = tag.strip()
+        stripped_tag = tag.strip().replace(" ", "_")
         if len(stripped_tag) > 0:
             prefix = "-" if not include_tags else ""
             cleaned_tags_list.append(prefix + stripped_tag)
@@ -588,19 +588,6 @@ class GetRandomBooruPost:
                     tags_dict[t] = tags_dict[t].replace("(", "\(")
                     tags_dict[t] = tags_dict[t].replace(")", "\)")
 
-            # if filtered_tags:
-            #     filtered_general_tags = ""
-            #     filtered_tags_split = [tag.strip() for tag in filtered_tags.split(",")]
-                
-            #     for filter_tag in tags_dict["general_tags"].split(", "):
-            #         stripped = filter_tag.strip()
-            #         if len(stripped) > 0:
-            #             # stripped = stripped.replace("_", " ")
-            #             # stripped = stripped.replace("(", "\(")
-            #             # stripped = stripped.replace(")", "\)")
-            #             if stripped not in filtered_tags_split:
-            #                 filtered_general_tags += stripped + ", "
-            #     tags_dict["general_tags"] = filtered_general_tags
             if filtered_tags:
                 # Convert the comma-separated string of tags to remove (from the filtered_tags input)
                 # into a set for efficient lookup. Each tag is stripped of whitespace.
