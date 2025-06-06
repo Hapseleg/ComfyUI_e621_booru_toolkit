@@ -190,16 +190,14 @@ def get_danbooru_post_data(response, img_size):
     )
 
 def prepare_search_tags(tags = "", include_tags = True):
-    cleaned_tags = ""
+    cleaned_tags_list = []
     for tag in tags.split(","):
         stripped_tag = tag.strip()
         if len(stripped_tag) > 0:
-            if not include_tags:
-                cleaned_tags += "-"
-            cleaned_tags += stripped_tag + '+'
-    cleaned_tags = cleaned_tags[:-1]
+            prefix = "-" if not include_tags else ""
+            cleaned_tags_list.append(prefix + stripped_tag)
 
-    return(cleaned_tags)
+    return cleaned_tags_list
 
 class GetBooruPost:
     @classmethod
@@ -429,6 +427,9 @@ class GetRandomBooruPost:
                 "seed":( "INT",{"default": 0 }),
                 "normalize_tags":("BOOLEAN", {"default": True, "tooltip": "Replace '_' with ' ' and (...) with \(...\)"}),
             },
+            "optional": {
+                "filtered_tags": ("STRING", {"forceInput": True}),
+            },
             "hidden": {"unique_id": "UNIQUE_ID", "extra_pnginfo": "EXTRA_PNGINFO", "prompt": "PROMPT"},
         }
 
@@ -449,12 +450,12 @@ class GetRandomBooruPost:
     FUNCTION = "get_random_data"
     CATEGORY = "E621 Booru Toolkit"
 
-    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, normalize_tags, content_rating, **kwargs):
+    def get_random_data(self, site, scale_target_avg, img_size, include_tags, user_included_tags, exclude_tags, user_excluded_tags, normalize_tags, content_rating, filtered_tags = None, **kwargs):
         try:
             # todo: doesnt work for gelbooru, safebooru, similar
             # NOTE: these sites are cringe, the tags are in a singular string. Char/artist/general tags, all merged. WHY?
-            post_url = ""
-            tag_str = ""
+            post_url_suffix = ""
+            tag_list = []
             # https://danbooru.donmai.us/posts/random.json?tags=
             # https://e6ai.net/posts.json?limit=1&tags=%20order%3Arandom
             # https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&tags=sort%3arandom
@@ -494,64 +495,56 @@ class GetRandomBooruPost:
             #e621 etc/rule34 = SAFE, QUESTIONABLE, EXPLICIT
             match content_rating:
                 case ContentRatings.GENERAL.value:
-                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
-                        tag_str += "rating:general"
+                    if site == BooruSite.DANBOORU.value or site == BooruSite.GELBOORU.value:
+                        tag_list.append("rating:general")
                     else:
-                        tag_str += "rating:safe"    
+                        tag_list.append("rating:safe")
                 case ContentRatings.SENSITIVE.value:
-                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
-                        tag_str += "rating:sensitive"
+                    if site == BooruSite.DANBOORU.value or site == BooruSite.GELBOORU.value:
+                        tag_list.append("rating:sensitive")
                     else:
-                        tag_str += "rating:questionable"
+                        tag_list.append("rating:questionable")
                 case ContentRatings.QUESTIONABLE.value:
-                    tag_str += "rating:questionable"
+                    tag_list.append("rating:questionable")
                 case ContentRatings.EXPLICIT.value:
-                    tag_str += "rating:explicit"
+                    tag_list.append("rating:explicit")
                 case ContentRatings.SAFE.value:
-                    if site == BooruSite.DANBOORU or site == BooruSite.GELBOORU:
-                        tag_str += "rating:general"
+                    if site == BooruSite.DANBOORU.value or site == BooruSite.GELBOORU.value:
+                        tag_list.append("rating:general")
                     else:
-                        tag_str += "rating:safe"
+                        tag_list.append("rating:safe")
                         
                 case ContentRatings.SFW.value:
-                    if site == BooruSite.DANBOORU:
-                        tag_str += "is:sfw"
-                    elif site == BooruSite.GELBOORU:
-                        tag_str += "rating:general"
+                    if site == BooruSite.DANBOORU.value:
+                        tag_list.append("is:sfw")
+                    elif site == BooruSite.GELBOORU.value:
+                        tag_list.append("rating:general")
                     else:
-                        tag_str += "rating:safe"
+                        tag_list.append("rating:safe")
                         
                 case ContentRatings.NSFW.value:
-                    if site == BooruSite.DANBOORU:
-                        tag_str += "is:nsfw"
+                    if site == BooruSite.DANBOORU.value:
+                        tag_list.append("is:nsfw")
                     else:
-                        tag_str += "rating:explicit"
+                        tag_list.append("rating:explicit")
                 case _:
-                    tag_str += ""
+                    pass # No rating tag added for "ANY"
                     
             
             
                 
             if include_tags:
                 # user_included_tags = user_included_tags.replace(", ", ",").split(",")
-                # for tag in user_included_tags:
-                #     tag_str += tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
-                user_included_tags = prepare_search_tags(user_included_tags)
+                tag_list.extend(prepare_search_tags(user_included_tags, True))
                 
                 
             if exclude_tags:
                 # user_excluded_tags = user_excluded_tags.replace(", ", ",").split(",")
-                # for tag in user_excluded_tags:
-                #     tag_str += '-' + tag.replace(" ", "_").replace("\(", "(").replace("\)", ")") + '+'
-                user_excluded_tags = prepare_search_tags(user_excluded_tags, False)
+                tag_list.extend(prepare_search_tags(user_excluded_tags, False))
 
-            #remove the extra + at the end
-            # if len(tag_str) > 0:
-            #     tag_str = tag_str[:-1]
-
-            full_url = base_url + tag_str
+            full_url = base_url + "+".join(tag_list)
             print(full_url)
-            response = requests.get(full_url, headers=headers)
+            response = requests.get(full_url, headers=headers) # type: ignore
             try:
                 response = response.json()
             except:
@@ -595,6 +588,37 @@ class GetRandomBooruPost:
                     tags_dict[t] = tags_dict[t].replace("(", "\(")
                     tags_dict[t] = tags_dict[t].replace(")", "\)")
 
+            # if filtered_tags:
+            #     filtered_general_tags = ""
+            #     filtered_tags_split = [tag.strip() for tag in filtered_tags.split(",")]
+                
+            #     for filter_tag in tags_dict["general_tags"].split(", "):
+            #         stripped = filter_tag.strip()
+            #         if len(stripped) > 0:
+            #             # stripped = stripped.replace("_", " ")
+            #             # stripped = stripped.replace("(", "\(")
+            #             # stripped = stripped.replace(")", "\)")
+            #             if stripped not in filtered_tags_split:
+            #                 filtered_general_tags += stripped + ", "
+            #     tags_dict["general_tags"] = filtered_general_tags
+            if filtered_tags:
+                # Convert the comma-separated string of tags to remove (from the filtered_tags input)
+                # into a set for efficient lookup. Each tag is stripped of whitespace.
+                filtered_tags_split = [tag.strip() for tag in filtered_tags.split(",")]
+                tags_to_remove_set = {tag for tag in filtered_tags_split if tag} # Ensure no empty strings in the set
+
+                # Process the general_tags from the booru
+                # Assuming tags_dict["general_tags"] is a string like "tagA, tagB, tagC"
+                current_general_tags_list = tags_dict["general_tags"].split(", ")
+                
+                kept_tags = []
+                for tag_from_booru in current_general_tags_list:
+                    stripped_tag = tag_from_booru.strip() # Should be mostly clean if source format is consistent
+                    if stripped_tag and stripped_tag not in tags_to_remove_set:
+                        kept_tags.append(stripped_tag)
+                
+                # Join the kept tags with ", " - this will not add a trailing separator.
+                tags_dict["general_tags"] = ", ".join(kept_tags)
             
             return (
                 img_tensor,
@@ -611,7 +635,7 @@ class GetRandomBooruPost:
             )
         except:
             print(response)
-            raise Exception("Failed")
+            # raise Exception()
 
 
 class TagWikiFetch:
