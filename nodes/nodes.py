@@ -481,6 +481,10 @@ class GetRandomBooruPost:
                     post_url = f"{BooruSiteURLs.E6AI.value}/posts/"
                 case BooruSite.GELBOORU.value:
                     base_url = f"{BooruSiteURLs.GELBOORU.value}/index.php?page=dapi&s=post&q=index&json=1&limit=1&tags=sort%3arandom+"
+                    API_LOGIN, API_KEY = get_API_key(BooruSite.GELBOORU.value)
+                    if API_LOGIN != "":
+                        base_url += "user_id=" + API_LOGIN + "&"
+                        base_url += "api_key=" + API_KEY + "&"
                     post_url = f"{BooruSiteURLs.GELBOORU.value}?page=post&s=view&id="
                     #https://gelbooru.com/index.php?page=post&s=view&id=
                 case BooruSite.RULE34.value:
